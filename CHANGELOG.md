@@ -2,6 +2,34 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.8] - 2026-04-26
+
+### 🐛 Critical Fix - Billing Dropdown Now Works
+
+**Fixed: Billing Country Not Set Issue**
+- **Problem**: Billing thana showed text input even for Bangladesh orders because billing country was empty
+- **Root Cause**: Meta box was checking `country === 'BD' AND state starts with 'BD-'`
+- **Solution**: Now only checks if state starts with `'BD-'` (doesn't require country to be set)
+- **Result**: Billing thana now shows dropdown correctly, matching shipping behavior
+
+### 🔧 Technical Details
+**Before:**
+```php
+$is_bd = $billing_country === 'BD' && $billing_state && strpos( $billing_state, 'BD-' ) === 0;
+```
+
+**After:**
+```php
+$is_bd = $billing_state && strpos( $billing_state, 'BD-' ) === 0;
+```
+
+This change makes the field detection more robust - if the state code starts with "BD-", we know it's Bangladesh regardless of whether the country field is populated.
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Removed country requirement from dropdown detection
+
+---
+
 ## [1.0.7] - 2026-04-26
 
 ### 🐛 Critical Fixes
