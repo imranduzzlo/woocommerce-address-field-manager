@@ -82,6 +82,10 @@ class WAFM_Checkout_Fields {
 		// Clear session when user updates profile
 		add_action( 'personal_options_update', array( __CLASS__, 'clear_thana_session' ) );
 		add_action( 'edit_user_profile_update', array( __CLASS__, 'clear_thana_session' ) );
+
+		// Format address display in admin order page
+		add_filter( 'woocommerce_order_formatted_billing_address', array( __CLASS__, 'format_admin_address_display' ), 20, 2 );
+		add_filter( 'woocommerce_order_formatted_shipping_address', array( __CLASS__, 'format_admin_address_display' ), 20, 2 );
 	}
 
 	/**
@@ -742,6 +746,30 @@ class WAFM_Checkout_Fields {
 		}
 		
 		return $replacements;
+	}
+
+	/**
+	 * Format address display in admin order page
+	 * Converts state code to name and adds thana
+	 */
+	public static function format_admin_address_display( $address, $order ) {
+		// Ensure we have a valid order object
+		if ( ! is_a( $order, 'WC_Order' ) ) {
+			return $address;
+		}
+
+		// Check if this is billing or shipping
+		$is_billing = current_filter() === 'woocommerce_order_formatted_billing_address';
+		
+		// Convert state code to state name
+		if ( isset( $address['state'] ) && ! empty( $address['state'] ) && isset( $address['country'] ) && $address['country'] === 'BD' ) {
+			$states = WC()->countries->get_states( 'BD' );
+			if ( isset( $states[ $address['state'] ] ) ) {
+				$address['state'] = $states[ $address['state'] ];
+			}
+		}
+
+		return $address;
 	}
 
 	/**

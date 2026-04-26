@@ -2,6 +2,38 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.28] - 2026-04-26
+
+### 🔧 Fixed Admin Address Display
+
+**Problem**: 
+- New orders showed state as code "BD-58" instead of "SATKHIRA"
+- Thana wasn't displayed in admin order page
+- Only showed correctly after manually editing and saving in WooCommerce admin
+- Third-party edits (webhooks, sheets) also didn't show formatted
+
+**Root Cause**:
+- WooCommerce admin displays raw address data, not formatted address
+- Our formatting only worked on thank you page/emails
+- Admin order page wasn't using the formatted address filters
+
+**Solution**:
+- Added `format_admin_address_display()` method
+- Converts state code to state name in admin
+- Hooks into `woocommerce_order_formatted_billing_address` and `woocommerce_order_formatted_shipping_address` with priority 20
+- Works for new orders, third-party edits, and manual edits
+
+**Result**: 
+- State now shows as "SATKHIRA" instead of "BD-58" in admin
+- Thana displays correctly in admin order page
+- Works immediately for new orders and external updates
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Added admin address formatting
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.28
+
+---
+
 ## [1.0.27] - 2026-04-26
 
 ### 🔧 Fixed GitHub Auto-Updater
