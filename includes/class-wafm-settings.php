@@ -142,12 +142,16 @@ class WAFM_Settings {
 
 		$billing_state = '';
 		$billing_thana = '';
+		$billing_country = '';
 		$shipping_state = '';
 		$shipping_thana = '';
+		$shipping_country = '';
 
 		if ( $order_id ) {
+			$billing_country = get_post_meta( $order_id, '_billing_country', true );
 			$billing_state = get_post_meta( $order_id, '_billing_state', true );
 			$billing_thana = get_post_meta( $order_id, '_' . $billing_settings['field_name'], true );
+			$shipping_country = get_post_meta( $order_id, '_shipping_country', true );
 			$shipping_state = get_post_meta( $order_id, '_shipping_state', true );
 			$shipping_thana = get_post_meta( $order_id, '_' . $shipping_settings['field_name'], true );
 		}
@@ -169,8 +173,10 @@ class WAFM_Settings {
 				'thanaData' => $thana_data,
 				'billingSettings' => $billing_settings,
 				'shippingSettings' => $shipping_settings,
+				'billingCountry' => $billing_country,
 				'billingState' => $billing_state,
 				'billingThana' => $billing_thana,
+				'shippingCountry' => $shipping_country,
 				'shippingState' => $shipping_state,
 				'shippingThana' => $shipping_thana,
 			)

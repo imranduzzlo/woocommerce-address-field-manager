@@ -1,6 +1,7 @@
 /**
  * WooCommerce Address Field Manager - Order Edit Page Script
  * Makes thana fields dynamic in admin order edit page
+ * Converts between select dropdown and text input based on country
  */
 
 jQuery(function($) {
@@ -14,7 +15,9 @@ jQuery(function($) {
 			billingState: wafmOrderEditData.billingState || '',
 			billingThana: wafmOrderEditData.billingThana || '',
 			shippingState: wafmOrderEditData.shippingState || '',
-			shippingThana: wafmOrderEditData.shippingThana || ''
+			shippingThana: wafmOrderEditData.shippingThana || '',
+			billingCountry: wafmOrderEditData.billingCountry || '',
+			shippingCountry: wafmOrderEditData.shippingCountry || ''
 		},
 
 		init: function() {
@@ -25,15 +28,23 @@ jQuery(function($) {
 		setupEventListeners: function() {
 			const self = this;
 
-			// Listen for billing state changes
+			// Listen for billing country changes
 			if (this.config.billingSettings.enabled) {
+				$(document).on('change', '#_billing_country', function() {
+					self.updateThanaField('billing');
+				});
+				
 				$(document).on('change', '#_billing_state', function() {
 					self.updateThanaField('billing');
 				});
 			}
 
-			// Listen for shipping state changes
+			// Listen for shipping country changes
 			if (this.config.shippingSettings.enabled) {
+				$(document).on('change', '#_shipping_country', function() {
+					self.updateThanaField('shipping');
+				});
+				
 				$(document).on('change', '#_shipping_state', function() {
 					self.updateThanaField('shipping');
 				});
@@ -54,26 +65,90 @@ jQuery(function($) {
 
 		updateThanaField: function(type) {
 			const settings = type === 'billing' ? this.config.billingSettings : this.config.shippingSettings;
+			const countryFieldId = type === 'billing' ? '#_billing_country' : '#_shipping_country';
 			const stateFieldId = type === 'billing' ? '#_billing_state' : '#_shipping_state';
 			const thanaFieldId = '#_' + settings.field_name;
 
+			const $countryField = $(countryFieldId);
 			const $stateField = $(stateFieldId);
 			const $thanaField = $(thanaFieldId);
 
-			if (!$stateField.length || !$thanaField.length) {
+			if (!$thanaField.length) {
 				return;
 			}
 
+			const countryValue = $countryField.val();
 			const stateValue = $stateField.val();
-			const isBD = stateValue && stateValue.toString().startsWith('BD-');
+			const isBD = countryValue === 'BD' && stateValue && stateValue.toString().startsWith('BD-');
 
 			if (isBD && this.config.thanaData[stateValue]) {
-				this.populateThanaOptions($thanaField, stateValue, type);
+				// Convert to select and populate
+				this.makeSelect($thanaField, stateValue, type);
 			} else {
-				// Clear options and add placeholder
-				$thanaField.empty();
-				$thanaField.append($('<option>').val('').text('Select Thana'));
+				// Convert to text input
+				this.makeInput($thanaField, type);
 			}
+		},
+
+		makeSelect: function($field, stateValue, type) {
+			const settings = type === 'billing' ? this.config.billingSettings : this.config.shippingSettings;
+			const fieldId = '_' + settings.field_name;
+			const currentValue = $field.val();
+
+			// If already a select, just populate
+			if ($field.is('select')) {
+				this.populateThanaOptions($field, stateValue, type);
+				return;
+			}
+
+			// Convert input to select
+			const $wrapper = $field.closest('p.form-field');
+			const $label = $wrapper.find('label');
+			
+			// Create select element
+			const $select = $('<select>')
+				.attr('id', fieldId)
+				.attr('name', fieldId)
+				.attr('class', 'select short')
+				.css('width', '100%');
+
+			// Replace input with select
+			$field.replaceWith($select);
+
+			// Populate options
+			this.populateThanaOptions($select, stateValue, type);
+
+			// Restore value if it was a code
+			if (currentValue) {
+				$select.val(currentValue);
+			}
+		},
+
+		makeInput: function($field, type) {
+			const settings = type === 'billing' ? this.config.billingSettings : this.config.shippingSettings;
+			const fieldId = '_' + settings.field_name;
+			const currentValue = $field.val();
+
+			// If already an input, do nothing
+			if ($field.is('input[type="text"]')) {
+				return;
+			}
+
+			// Convert select to input
+			const $wrapper = $field.closest('p.form-field');
+			
+			// Create input element
+			const $input = $('<input>')
+				.attr('type', 'text')
+				.attr('id', fieldId)
+				.attr('name', fieldId)
+				.attr('class', 'short')
+				.attr('placeholder', settings.placeholder_input || 'Enter locality')
+				.css('width', '100%')
+				.val(currentValue);
+
+			// Replace select with input
+			$field.replaceWith($input);
 		},
 
 		populateThanaOptions: function($select, stateValue, type) {
