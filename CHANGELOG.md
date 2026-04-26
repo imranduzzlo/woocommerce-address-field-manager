@@ -2,6 +2,42 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.23] - 2026-04-26
+
+### 🔧 Fixed Thana Display in Address Blocks - Final Solution
+
+**Problem**: Thana was being added to address array with correct key `{thana}` and replacement was working, but still not appearing in formatted address output
+
+**Root Cause Found (via debug logs)**:
+- ✅ Thana WAS being retrieved correctly (BD-58-05 = Satkhira Sadar)
+- ✅ Thana WAS being added to address array with key `thana`
+- ✅ `woocommerce_formatted_address_replacements` filter WAS being called
+- ✅ Replacement WAS being added: `{thana} = Satkhira Sadar`
+- ❌ BUT the `{thana}` placeholder in format template wasn't being used by WooCommerce
+
+**Solution**:
+- Hooked `add_thana_to_formatted_address_string` method to `woocommerce_formatted_address` filter
+- This filter runs AFTER WooCommerce formats the address, allowing direct string modification
+- Method adds thana after the state line by string replacement
+- Removed all debug logging
+
+### 📝 Technical Details
+**Approach**:
+- Instead of relying on format template placeholders, directly modify the formatted address string
+- Find the state name in the formatted address and add thana after it
+- This ensures thana appears in the correct position regardless of template issues
+
+**Code Added**:
+```php
+add_filter( 'woocommerce_formatted_address', array( __CLASS__, 'add_thana_to_formatted_address_string' ), 10, 2 );
+```
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Hooked formatted address string modifier, removed debug logs
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.23
+
+---
+
 ## [1.0.20] - 2026-04-26
 
 ### 🔧 Fixed Thana Display in Address Blocks - Correct Placeholder
