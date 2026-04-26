@@ -59,8 +59,9 @@ class WAFM_Checkout_Fields {
 		add_filter( 'woocommerce_order_formatted_billing_address', array( __CLASS__, 'add_thana_to_formatted_address' ), 10, 2 );
 		add_filter( 'woocommerce_order_formatted_shipping_address', array( __CLASS__, 'add_thana_to_formatted_address' ), 10, 2 );
 
-		// Modify formatted address string to include thana (runs after WooCommerce formats the address)
-		add_filter( 'woocommerce_formatted_address', array( __CLASS__, 'add_thana_to_formatted_address_string' ), 10, 2 );
+		// Modify the final formatted address strings to include thana
+		add_filter( 'woocommerce_order_get_formatted_billing_address', array( __CLASS__, 'add_thana_to_formatted_address_string' ), 10, 3 );
+		add_filter( 'woocommerce_order_get_formatted_shipping_address', array( __CLASS__, 'add_thana_to_formatted_address_string' ), 10, 3 );
 
 		// Add thana to customer account page
 		add_filter( 'woocommerce_customer_meta_fields', array( __CLASS__, 'add_customer_thana_fields' ) );
@@ -754,26 +755,65 @@ class WAFM_Checkout_Fields {
 	 * Modify the formatted address string to include thana
 	 * This runs after WooCommerce formats the address
 	 */
-	public static function add_thana_to_formatted_address_string( $formatted_address, $args ) {
+	public static function add_thana_to_formatted_address_string( $formatted_address, $args, $order ) {
 		// Debug logging
 		error_log( 'WAFM Debug - Formatted Address String Filter' );
-		error_log( 'WAFM Debug - Args: ' . print_r( $args, true ) );
 		error_log( 'WAFM Debug - Formatted Address Before: ' . $formatted_address );
 		
-		// Check if thana exists and address is for Bangladesh
-		if ( isset( $args['thana'] ) && ! empty( $args['thana'] ) && isset( $args['country'] ) && $args['country'] === 'BD' ) {
+		// Ensure we have a valid order object
+		if ( ! is_a( $order, 'WC_Order' ) ) {
+			error_log( 'WAFM Debug - Not a valid order object' );
+			return $formatted_address;
+		}
+		
+		// Get settings
+		$billing_settings = WAFM_Settings::get_billing_settings();
+		$shipping_settings = WAFM_Settings::get_shipping_settings();
+		
+		// Check if this is billing or shipping based on the filter
+		$is_billing = current_filter() === 'woocommerce_order_get_formatted_billing_address';
+		$settings = $is_billing ? $billing_settings : $shipping_settings;
+		
+		error_log( 'WAFM Debug - Is Billing: ' . ( $is_billing ? 'yes' : 'no' ) );
+		
+		if ( ! $settings['enabled'] ) {
+			error_log( 'WAFM Debug - Settings not enabled' );
+			return $formatted_address;
+		}
+		
+		// Get thana code from order meta
+		$meta_key = '_' . $settings['field_name'];
+		$thana_code = $order->get_meta( $meta_key );
+		
+		error_log( 'WAFM Debug - Thana Code: ' . $thana_code );
+		
+		if ( ! $thana_code ) {
+			error_log( 'WAFM Debug - No thana code found' );
+			return $formatted_address;
+		}
+		
+		// Convert code to name for display
+		$thana_name = self::get_thana_name_from_code( $thana_code );
+		$display_value = $thana_name ? $thana_name : $thana_code;
+		
+		error_log( 'WAFM Debug - Thana Display Value: ' . $display_value );
+		
+		// Get the state to find where to insert thana
+		$state_code = $is_billing ? $order->get_billing_state() : $order->get_shipping_state();
+		
+		error_log( 'WAFM Debug - State Code: ' . $state_code );
+		
+		if ( $state_code ) {
+			// Get state name
+			$states = WC()->countries->get_states( 'BD' );
+			$state_name = isset( $states[ $state_code ] ) ? $states[ $state_code ] : $state_code;
+			
+			error_log( 'WAFM Debug - State Name: ' . $state_name );
+			
 			// Add thana after state line
-			if ( isset( $args['state'] ) && ! empty( $args['state'] ) ) {
-				$state_name = WC()->countries->get_states( 'BD' )[ $args['state'] ] ?? $args['state'];
-				error_log( 'WAFM Debug - State Code: ' . $args['state'] );
-				error_log( 'WAFM Debug - State Name: ' . $state_name );
-				error_log( 'WAFM Debug - Thana: ' . $args['thana'] );
-				
-				// Find the state in the formatted address and add thana after it
-				$formatted_address = str_replace( $state_name, $state_name . "\n" . $args['thana'], $formatted_address );
-				
-				error_log( 'WAFM Debug - Formatted Address After: ' . $formatted_address );
-			}
+			$formatted_address = str_replace( $state_name, $state_name . "\n" . $display_value, $formatted_address );
+			
+			error_log( 'WAFM Debug - Formatted Address After: ' . $formatted_address );
 		}
 		
 		return $formatted_address;
