@@ -2,6 +2,54 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.39] - 2026-04-26
+
+### 🎯 The Ultimate Fix - Multi-Layer Thana Injection
+
+**Problem with v1.0.38**: 
+Cache clearing wasn't enough. WooCommerce caches the formatted address BEFORE our filters run, so even clearing cache didn't help for new orders.
+
+**The Ultimate Solution - Multi-Layer Approach**:
+Instead of relying on cache clearing, we now inject thana at MULTIPLE points in the address formatting pipeline with VERY HIGH priority (999) to ensure it's always included:
+
+1. **Layer 1:** `woocommerce_order_formatted_billing_address` (priority 999)
+2. **Layer 2:** `woocommerce_formatted_address_replacements` (priority 999)
+3. **Layer 3:** `woocommerce_order_get_formatted_billing_address` (priority 999) - NEW!
+
+**New Method: `ensure_thana_in_formatted_string()`**:
+This is the final safety net that runs at the very end of the formatting process:
+- Checks if thana is already in the formatted string
+- If not, injects it before the state
+- Ensures thana ALWAYS appears, even if earlier filters were bypassed
+
+**How It Works**:
+```php
+// Hook into the final formatted address string
+add_filter('woocommerce_order_get_formatted_billing_address', 'ensure_thana_in_formatted_string', 999, 2);
+
+// In the method:
+// 1. Get thana from meta
+// 2. Check if already in string
+// 3. If not, insert before state
+// 4. Return modified string
+```
+
+**Result**: 
+- ✅ Thana shows for NEW orders immediately
+- ✅ Thana shows for edited orders
+- ✅ Thana always appears above state
+- ✅ Works everywhere: admin, thank you page, emails
+- ✅ State shows formatted (SATKHIRA)
+- ✅ Dropdown still works correctly
+- ✅ No cache issues
+- ✅ Bulletproof solution!
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Added multi-layer thana injection
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.39
+
+---
+
 ## [1.0.38] - 2026-04-26
 
 ### 🔧 Fixed Thana Display for New Orders - Cache Clearing

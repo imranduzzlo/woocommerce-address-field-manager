@@ -60,11 +60,15 @@ class WAFM_Checkout_Fields {
 		add_filter( 'woocommerce_localisation_address_formats', array( __CLASS__, 'add_thana_to_address_format' ), 20 );
 		
 		// Add thana replacement values when formatting address
-		add_filter( 'woocommerce_formatted_address_replacements', array( __CLASS__, 'add_thana_replacement' ), 10, 2 );
+		add_filter( 'woocommerce_formatted_address_replacements', array( __CLASS__, 'add_thana_replacement' ), 999, 2 );
 
-		// Add thana values to formatted address arrays
-		add_filter( 'woocommerce_order_formatted_billing_address', array( __CLASS__, 'add_thana_to_formatted_address' ), 10, 2 );
-		add_filter( 'woocommerce_order_formatted_shipping_address', array( __CLASS__, 'add_thana_to_formatted_address' ), 10, 2 );
+		// Add thana values to formatted address arrays (high priority to run last)
+		add_filter( 'woocommerce_order_formatted_billing_address', array( __CLASS__, 'add_thana_to_formatted_address' ), 999, 2 );
+		add_filter( 'woocommerce_order_formatted_shipping_address', array( __CLASS__, 'add_thana_to_formatted_address' ), 999, 2 );
+		
+		// Also hook into the final formatted address string to ensure thana is always included
+		add_filter( 'woocommerce_order_get_formatted_billing_address', array( __CLASS__, 'ensure_thana_in_formatted_string' ), 999, 2 );
+		add_filter( 'woocommerce_order_get_formatted_shipping_address', array( __CLASS__, 'ensure_thana_in_formatted_string' ), 999, 2 );
 
 		// Add thana to customer account page
 		add_filter( 'woocommerce_customer_meta_fields', array( __CLASS__, 'add_customer_thana_fields' ) );
@@ -446,6 +450,74 @@ class WAFM_Checkout_Fields {
 		$address['thana'] = $display_value;
 
 		return $address;
+	}
+
+	/**
+	 * Ensure thana is in the formatted address string (final safety net)
+	 * This runs at the very end to ensure thana is always included
+	 * 
+	 * @param string $formatted_address The formatted address string
+	 * @param WC_Order $order The order object
+	 * @return string Modified formatted address with thana
+	 */
+	public static function ensure_thana_in_formatted_string( $formatted_address, $order ) {
+		// Ensure we have a valid order object
+		if ( ! is_a( $order, 'WC_Order' ) ) {
+			return $formatted_address;
+		}
+
+		// Get settings
+		$billing_settings = WAFM_Settings::get_billing_settings();
+		$shipping_settings = WAFM_Settings::get_shipping_settings();
+
+		// Check if this is billing or shipping
+		$is_billing = current_filter() === 'woocommerce_order_get_formatted_billing_address';
+		$settings = $is_billing ? $billing_settings : $shipping_settings;
+
+		if ( ! $settings['enabled'] ) {
+			return $formatted_address;
+		}
+
+		// Get thana code from order meta
+		$meta_key = '_' . $settings['field_name'];
+		$thana_code = $order->get_meta( $meta_key );
+
+		if ( ! $thana_code ) {
+			return $formatted_address;
+		}
+
+		// Convert code to name for display
+		$thana_name = self::get_thana_name_from_code( $thana_code );
+		if ( ! $thana_name ) {
+			return $formatted_address;
+		}
+
+		// Check if thana is already in the formatted address
+		if ( strpos( $formatted_address, $thana_name ) !== false ) {
+			return $formatted_address; // Already there, don't add again
+		}
+
+		// Get the state to find where to insert thana
+		$state = $is_billing ? $order->get_billing_state() : $order->get_shipping_state();
+		
+		// If state is a code, convert to name for matching
+		if ( $state && strpos( $state, 'BD-' ) === 0 ) {
+			$states = WC()->countries->get_states( 'BD' );
+			$state_name = isset( $states[ $state ] ) ? $states[ $state ] : $state;
+		} else {
+			$state_name = $state;
+		}
+
+		// Insert thana before state in the formatted address
+		if ( $state_name && strpos( $formatted_address, $state_name ) !== false ) {
+			// Add thana on a new line before the state
+			$formatted_address = str_replace( $state_name, $thana_name . '<br/>' . $state_name, $formatted_address );
+		} else {
+			// If we can't find state, just append thana at the end
+			$formatted_address .= '<br/>' . $thana_name;
+		}
+
+		return $formatted_address;
 	}
 
 	/**
