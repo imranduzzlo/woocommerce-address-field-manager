@@ -348,6 +348,9 @@ class WAFM_Checkout_Fields {
 
 		// Save the order (state codes remain as codes for dropdown compatibility)
 		$order->save();
+		
+		// Clear all caches to ensure formatted address shows thana immediately
+		self::clear_all_order_caches( $order_id );
 	}
 
 	/**

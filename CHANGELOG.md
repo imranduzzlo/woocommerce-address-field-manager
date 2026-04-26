@@ -2,6 +2,41 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.38] - 2026-04-26
+
+### 🔧 Fixed Thana Display for New Orders - Cache Clearing
+
+**Problem**: 
+Thana only showed after clicking "Edit" and "Update" in admin. For new orders, thana wasn't displaying even though it was saved correctly.
+
+**Root Cause**:
+WooCommerce caches the formatted address. When we save thana during checkout, the cache isn't cleared, so the formatted address doesn't include thana until the cache is manually cleared (by editing).
+
+**Solution**:
+Added `clear_all_order_caches()` call immediately after saving thana fields in `save_thana_fields()` method.
+
+**What Changed**:
+```php
+// Save the order
+$order->save();
+
+// Clear all caches to ensure formatted address shows thana immediately
+self::clear_all_order_caches( $order_id );
+```
+
+**Result**: 
+- ✅ Thana shows immediately for new orders
+- ✅ State shows formatted (SATKHIRA) for new orders
+- ✅ No need to edit/update to see thana
+- ✅ Works everywhere: admin, thank you page, emails
+- ✅ Dropdown still works correctly
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Added cache clearing after save
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.38
+
+---
+
 ## [1.0.37] - 2026-04-26
 
 ### 🔧 Fixed State Formatting in Formatted Address Array
