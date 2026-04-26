@@ -2,6 +2,39 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.24] - 2026-04-26
+
+### 🎨 Improved Address Display Format
+
+**Enhancement**: State now displays as formatted name instead of code
+
+**Changes**:
+- State now shows as "SATKHIRA" instead of "BD-58"
+- Updated Bangladesh address format to use `{state_upper}` placeholder
+- Thana insertion logic updated to work with state names instead of codes
+
+**Before**:
+```
+Md Imran
+Baliadanga, Hathatgonj, Satkhira Sadar
+Kaliganj
+BD-58
+```
+
+**After**:
+```
+Md Imran
+Baliadanga, Hathatgonj, Satkhira Sadar
+Kaliganj
+SATKHIRA
+```
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Updated address format and string replacement logic
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.24
+
+---
+
 ## [1.0.23] - 2026-04-26
 
 ### 🔧 Fixed Thana Display in Address Blocks - Final Solution

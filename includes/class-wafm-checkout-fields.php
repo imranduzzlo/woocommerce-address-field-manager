@@ -722,12 +722,13 @@ class WAFM_Checkout_Fields {
 		$billing_settings = WAFM_Settings::get_billing_settings();
 		$shipping_settings = WAFM_Settings::get_shipping_settings();
 
-		// Add thana placeholder to Bangladesh address format
-		// Use simple {thana} placeholder (without billing_/shipping_ prefix)
-		// WooCommerce uses the same format for both billing and shipping
-		if ( isset( $formats['BD'] ) && ( $billing_settings['enabled'] || $shipping_settings['enabled'] ) ) {
-			// Add {thana} placeholder after {state}
-			$formats['BD'] = str_replace( '{state}', '{state}\n{thana}', $formats['BD'] );
+		// Customize Bangladesh address format to show state name instead of code
+		// and add thana placeholder
+		if ( $billing_settings['enabled'] || $shipping_settings['enabled'] ) {
+			// Set custom BD format with state name (not code) and thana
+			// Default WooCommerce format: "{name}\n{company}\n{address_1}\n{address_2}\n{city}\n{state}\n{postcode}"
+			// We want: state name, then thana, then postcode
+			$formats['BD'] = "{name}\n{company}\n{address_1}\n{address_2}\n{city}\n{state_upper}\n{thana}\n{postcode}";
 		}
 
 		return $formats;
@@ -785,13 +786,17 @@ class WAFM_Checkout_Fields {
 		$thana_name = self::get_thana_name_from_code( $thana_code );
 		$display_value = $thana_name ? $thana_name : $thana_code;
 		
-		// Get the state code to find where to insert thana (thana goes before state)
+		// Get the state code and convert to state name
 		$state_code = $is_billing ? $order->get_billing_state() : $order->get_shipping_state();
 		
 		if ( $state_code ) {
-			// Add thana before state code line
-			// The state code appears as "BD-58" in the formatted address
-			$formatted_address = str_replace( '<br/>' . $state_code, '<br/>' . $display_value . '<br/>' . $state_code, $formatted_address );
+			// Get state name from code
+			$states = WC()->countries->get_states( 'BD' );
+			$state_name = isset( $states[ $state_code ] ) ? strtoupper( $states[ $state_code ] ) : $state_code;
+			
+			// Add thana before state name line
+			// The state appears as "SATKHIRA" (uppercase) in the formatted address when using {state_upper}
+			$formatted_address = str_replace( '<br/>' . $state_name, '<br/>' . $display_value . '<br/>' . $state_name, $formatted_address );
 		}
 		
 		return $formatted_address;
