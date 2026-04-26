@@ -2,6 +2,42 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.20] - 2026-04-26
+
+### 🔧 Fixed Thana Display in Address Blocks - Correct Placeholder
+
+**Problem**: Thana was being added to address array but not displaying in address blocks
+
+**Root Cause Found (via debug logs)**:
+- Thana WAS being added to address array correctly
+- BUT using wrong key: `billing_thana` and `shipping_thana`
+- WooCommerce address format expects simple keys without prefix
+- Example: `{first_name}` not `{billing_first_name}`, `{city}` not `{billing_city}`
+- So it should be `{thana}` not `{billing_thana}`
+
+**Solution**:
+- Changed address array key from `$settings['field_name']` to simple `'thana'`
+- Updated address format to use `{thana}` placeholder instead of `{billing_thana}` and `{shipping_thana}`
+- Removed debug logging (no longer needed)
+
+### 📝 Technical Details
+**Before**:
+```php
+$address['billing_thana'] = 'Kalaroa';  // ❌ Wrong - WooCommerce doesn't recognize this
+Format: {state}\n{billing_thana}        // ❌ Wrong placeholder
+```
+
+**After**:
+```php
+$address['thana'] = 'Kalaroa';          // ✅ Correct - matches WooCommerce pattern
+Format: {state}\n{thana}                // ✅ Correct placeholder
+```
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Fixed address array key and format placeholder
+
+---
+
 ## [1.0.18] - 2026-04-26
 
 ### 🔧 Fixed Thana Display in Address Blocks
