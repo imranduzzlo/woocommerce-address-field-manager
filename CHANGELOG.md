@@ -1,11 +1,44 @@
 # Changelog
 
-
-## [1.0.0] - 2026-04-26
-
-### Changes
-Initial release - WooCommerce Address Field Manager for Bangladesh
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
+
+## [1.0.1] - 2026-04-26
+
+### 🔧 Bug Fixes
+
+**Cache Issues Fixed**
+- Fixed thank you page showing old/cached thana data after order edit
+- Added cache clearing when saving order from admin (`wp_cache_delete`)
+- Clear WooCommerce order cache and post meta cache
+- Refresh order object from database to ensure fresh data
+- Thank you page now always displays the latest updated thana
+
+**Admin Order Edit Improvements**
+- Fixed admin dropdown not populating with thana options
+- Fixed JavaScript variable name mismatch (wtsOrderEditData → wafmOrderEditData)
+- Admin dropdown now properly shows all available thanas
+- Current thana value is automatically selected when editing
+
+**Dynamic Field Conversion**
+- Admin order edit now converts between dropdown and text input based on country
+- Matches frontend behavior exactly
+- Bangladesh: Shows dropdown with thana options
+- Other countries: Shows text input for manual entry
+- Listens for country changes and converts field automatically
+- Preserves field value during conversion
+
+### 🎯 Technical Improvements
+- Added country data to JavaScript localization
+- Enhanced event listeners for country and state changes
+- Improved field conversion logic (makeSelect/makeInput methods)
+- Better cache management for order meta data
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Cache clearing and data fetching
+- `includes/class-wafm-settings.php` - Country data passing
+- `assets/js/order-edit.js` - Dynamic field conversion
+
+---
 
 ## [1.0.0] - 2026-04-26
 
