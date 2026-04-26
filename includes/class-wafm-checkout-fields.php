@@ -798,20 +798,15 @@ class WAFM_Checkout_Fields {
 		
 		error_log( 'WAFM Debug - Thana Display Value: ' . $display_value );
 		
-		// Get the state to find where to insert thana
-		$state_code = $is_billing ? $order->get_billing_state() : $order->get_shipping_state();
+		// Get the city to find where to insert thana (thana goes after city)
+		$city = $is_billing ? $order->get_billing_city() : $order->get_shipping_city();
 		
-		error_log( 'WAFM Debug - State Code: ' . $state_code );
+		error_log( 'WAFM Debug - City: ' . $city );
 		
-		if ( $state_code ) {
-			// Get state name
-			$states = WC()->countries->get_states( 'BD' );
-			$state_name = isset( $states[ $state_code ] ) ? $states[ $state_code ] : $state_code;
-			
-			error_log( 'WAFM Debug - State Name: ' . $state_name );
-			
-			// Add thana after state line
-			$formatted_address = str_replace( $state_name, $state_name . "\n" . $display_value, $formatted_address );
+		if ( $city ) {
+			// Add thana after city line (city is on its own line in the formatted address)
+			// Use <br/> as line separator (WooCommerce uses <br/> in formatted addresses)
+			$formatted_address = str_replace( $city . '<br/>', $city . '<br/>' . $display_value . '<br/>', $formatted_address );
 			
 			error_log( 'WAFM Debug - Formatted Address After: ' . $formatted_address );
 		}
