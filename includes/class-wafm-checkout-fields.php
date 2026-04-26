@@ -1148,10 +1148,11 @@ class WAFM_Checkout_Fields {
 				var placeholder = (type === 'billing') ? billingPlaceholder : shippingPlaceholder;
 				var countryField = $('#_' + type + '_country');
 				var stateField = $('#_' + type + '_state');
-				var thanaField = $('#_' + fieldName);
+				var thanaFieldSelector = '#_' + fieldName;
+				var thanaField = $(thanaFieldSelector);
 				
 				if (!thanaField.length) {
-					console.log('Thana field not found: #_' + fieldName);
+					console.log('Thana field not found: ' + thanaFieldSelector);
 					return;
 				}
 				
@@ -1168,15 +1169,28 @@ class WAFM_Checkout_Fields {
 					console.log(type + ' - Converting to select, options:', Object.keys(thanaData[state]).length);
 					// Convert to select if needed
 					if (!thanaField.is('select')) {
-						var selectHtml = '<select id="_' + fieldName + '" name="_' + fieldName + '" class="wc-enhanced-select" style="width: 100%;"><option value="">Select Thana</option>';
+						// Destroy select2 if exists
+						if (thanaField.hasClass('select2-hidden-accessible')) {
+							thanaField.select2('destroy');
+						}
+						
+						// Create new select element
+						var $newSelect = $('<select id="_' + fieldName + '" name="_' + fieldName + '" class="wc-enhanced-select" style="width: 100%;"></select>');
+						$newSelect.append('<option value="">Select Thana</option>');
+						
 						$.each(thanaData[state], function(code, name) {
-							var selected = (code === currentValue) ? ' selected' : '';
-							selectHtml += '<option value="' + code + '"' + selected + '>' + name + '</option>';
+							var $option = $('<option></option>').val(code).text(name);
+							if (code === currentValue) {
+								$option.prop('selected', true);
+							}
+							$newSelect.append($option);
 						});
-						selectHtml += '</select>';
-						thanaField.replaceWith(selectHtml);
-						// Re-select the field after replacing
-						$('#_' + fieldName).selectWoo();
+						
+						// Remove old field and insert new one
+						thanaField.after($newSelect).remove();
+						
+						// Initialize selectWoo
+						$newSelect.selectWoo();
 					} else {
 						// Update options in existing select
 						thanaField.find('option:not(:first)').remove();
@@ -1192,8 +1206,16 @@ class WAFM_Checkout_Fields {
 					console.log(type + ' - Converting to input');
 					// Convert to input if needed
 					if (thanaField.is('select')) {
-						var inputHtml = '<input type="text" id="_' + fieldName + '" name="_' + fieldName + '" value="' + currentValue + '" style="width: 100%;" placeholder="' + placeholder + '" />';
-						thanaField.replaceWith(inputHtml);
+						// Destroy select2 if exists
+						if (thanaField.hasClass('select2-hidden-accessible')) {
+							thanaField.select2('destroy');
+						}
+						
+						// Create new input element
+						var $newInput = $('<input type="text" id="_' + fieldName + '" name="_' + fieldName + '" value="' + currentValue + '" style="width: 100%;" placeholder="' + placeholder + '" />');
+						
+						// Remove old field and insert new one
+						thanaField.after($newInput).remove();
 					}
 				}
 			}
