@@ -59,10 +59,6 @@ class WAFM_Checkout_Fields {
 		add_filter( 'woocommerce_order_formatted_billing_address', array( __CLASS__, 'add_thana_to_formatted_address' ), 10, 2 );
 		add_filter( 'woocommerce_order_formatted_shipping_address', array( __CLASS__, 'add_thana_to_formatted_address' ), 10, 2 );
 
-		// Modify the final formatted address strings to include thana
-		add_filter( 'woocommerce_order_get_formatted_billing_address', array( __CLASS__, 'add_thana_to_formatted_address_string' ), 10, 3 );
-		add_filter( 'woocommerce_order_get_formatted_shipping_address', array( __CLASS__, 'add_thana_to_formatted_address_string' ), 10, 3 );
-
 		// Add thana to customer account page
 		add_filter( 'woocommerce_customer_meta_fields', array( __CLASS__, 'add_customer_thana_fields' ) );
 
@@ -719,12 +715,12 @@ class WAFM_Checkout_Fields {
 		$billing_settings = WAFM_Settings::get_billing_settings();
 		$shipping_settings = WAFM_Settings::get_shipping_settings();
 
-		// Add thana placeholder to Bangladesh address format
-		// Use simple {thana} placeholder (without billing_/shipping_ prefix)
-		// WooCommerce uses the same format for both billing and shipping
-		if ( isset( $formats['BD'] ) && ( $billing_settings['enabled'] || $shipping_settings['enabled'] ) ) {
-			// Add {thana} placeholder after {state}
-			$formats['BD'] = str_replace( '{state}', '{state}\n{thana}', $formats['BD'] );
+		// Customize Bangladesh address format to show state name and thana
+		if ( $billing_settings['enabled'] || $shipping_settings['enabled'] ) {
+			// Set custom BD format with state name (uppercase) and thana
+			// {state_upper} shows state name in uppercase (e.g., "SATKHIRA" instead of "BD-58")
+			// {thana} shows thana name (e.g., "Kaliganj")
+			$formats['BD'] = "{name}\n{company}\n{address_1}\n{address_2}\n{city}\n{thana}\n{state_upper}\n{postcode}";
 		}
 
 		return $formats;
@@ -747,53 +743,6 @@ class WAFM_Checkout_Fields {
 		
 		return $replacements;
 	}
-
-	/**
-	 * Modify the formatted address string to include thana
-	 * This runs after WooCommerce formats the address
-	 */
-	public static function add_thana_to_formatted_address_string( $formatted_address, $args, $order ) {
-		// Ensure we have a valid order object
-		if ( ! is_a( $order, 'WC_Order' ) ) {
-			return $formatted_address;
-		}
-		
-		// Get settings
-		$billing_settings = WAFM_Settings::get_billing_settings();
-		$shipping_settings = WAFM_Settings::get_shipping_settings();
-		
-		// Check if this is billing or shipping based on the filter
-		$is_billing = current_filter() === 'woocommerce_order_get_formatted_billing_address';
-		$settings = $is_billing ? $billing_settings : $shipping_settings;
-		
-		if ( ! $settings['enabled'] ) {
-			return $formatted_address;
-		}
-		
-		// Get thana code from order meta
-		$meta_key = '_' . $settings['field_name'];
-		$thana_code = $order->get_meta( $meta_key );
-		
-		if ( ! $thana_code ) {
-			return $formatted_address;
-		}
-		
-		// Convert code to name for display
-		$thana_name = self::get_thana_name_from_code( $thana_code );
-		$display_value = $thana_name ? $thana_name : $thana_code;
-		
-		// Get the state code to find where to insert thana (thana goes before state)
-		$state_code = $is_billing ? $order->get_billing_state() : $order->get_shipping_state();
-		
-		if ( $state_code ) {
-			// Add thana before state code line
-			// The state code appears as "BD-58" in the formatted address
-			$formatted_address = str_replace( '<br/>' . $state_code, '<br/>' . $display_value . '<br/>' . $state_code, $formatted_address );
-		}
-		
-		return $formatted_address;
-	}
-
 
 	/**
 	 * Get thana data from JSON file

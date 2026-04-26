@@ -2,6 +2,30 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.26] - 2026-04-26
+
+### 🔧 Fixed Duplicate Thana Display
+
+**Problem**: In v1.0.24-v1.0.25, thana was appearing twice (above and below state) due to both format template AND string replacement method adding it
+
+**Root Cause**:
+- Address format template had `{thana}` placeholder
+- `add_thana_to_formatted_address_string()` method was ALSO adding thana via string replacement
+- This caused thana to appear twice
+
+**Solution**:
+- Removed `add_thana_to_formatted_address_string()` method entirely
+- Rely ONLY on the format template with `{thana}` placeholder
+- Format now: `{city}\n{thana}\n{state_upper}\n{postcode}`
+
+**Result**: Thana appears exactly once, in the correct position (after city, before state)
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Removed duplicate method, fixed format template
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.26
+
+---
+
 ## [1.0.25] - 2026-04-26
 
 ### 🗑️ Removed Duplicate Thana Display
