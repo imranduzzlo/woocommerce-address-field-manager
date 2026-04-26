@@ -2,6 +2,45 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.33] - 2026-04-26
+
+### 🔧 Fixed State Dropdown Selection in Admin
+
+**Problem**: 
+After v1.0.32, state dropdown in admin order edit page showed as "not selected" because:
+- Dropdown expects **code** (BD-58)
+- We're storing **name** (SATKHIRA)
+- No match = not selected
+
+**Solution**:
+Added JavaScript to fix dropdown selection:
+- Finds dropdown option by matching text (state name)
+- Selects the correct option
+- Works for both billing and shipping states
+
+**How it works**:
+```javascript
+// Loop through dropdown options
+$('#_billing_state option').each(function() {
+  // Match by text (SATKHIRA)
+  if ($(this).text().toUpperCase() === 'SATKHIRA') {
+    $(this).prop('selected', true);
+  }
+});
+```
+
+**Result**: 
+- ✅ State dropdown shows correct selection
+- ✅ Can edit state if needed
+- ✅ Display still shows formatted names
+- ✅ Everything works perfectly!
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Added state dropdown fix
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.33
+
+---
+
 ## [1.0.32] - 2026-04-26
 
 ### 🔧 Fixed WooCommerce Core Issue - Convert Codes to Names at Save Time

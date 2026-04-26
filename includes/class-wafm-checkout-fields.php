@@ -873,7 +873,37 @@ class WAFM_Checkout_Fields {
 		?>
 		<script type="text/javascript">
 		jQuery(document).ready(function($) {
-			// Format billing address
+			// Fix state dropdown selection - find option by text and select it
+			<?php 
+			$billing_state_display = $order->get_billing_state();
+			$shipping_state_display = $order->get_shipping_state();
+			
+			// Check if state is stored as name (not code)
+			$billing_is_name = $billing_state_display && strpos( $billing_state_display, 'BD-' ) !== 0;
+			$shipping_is_name = $shipping_state_display && strpos( $shipping_state_display, 'BD-' ) !== 0;
+			?>
+			
+			<?php if ( $billing_is_name ) : ?>
+			// Fix billing state dropdown
+			$('#_billing_state option').each(function() {
+				if ($(this).text().toUpperCase() === '<?php echo esc_js( strtoupper( $billing_state_display ) ); ?>') {
+					$(this).prop('selected', true);
+					$('#_billing_state').trigger('change');
+				}
+			});
+			<?php endif; ?>
+			
+			<?php if ( $shipping_is_name ) : ?>
+			// Fix shipping state dropdown
+			$('#_shipping_state option').each(function() {
+				if ($(this).text().toUpperCase() === '<?php echo esc_js( strtoupper( $shipping_state_display ) ); ?>') {
+					$(this).prop('selected', true);
+					$('#_shipping_state').trigger('change');
+				}
+			});
+			<?php endif; ?>
+			
+			// Format billing address display
 			<?php if ( $billing_state_name ) : ?>
 			$('.order_data_column:first .address').each(function() {
 				var html = $(this).html();
@@ -888,7 +918,7 @@ class WAFM_Checkout_Fields {
 			});
 			<?php endif; ?>
 			
-			// Format shipping address
+			// Format shipping address display
 			<?php if ( $shipping_state_name ) : ?>
 			$('.order_data_column:last .address').each(function() {
 				var html = $(this).html();
