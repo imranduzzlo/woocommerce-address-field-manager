@@ -756,13 +756,8 @@ class WAFM_Checkout_Fields {
 	 * This runs after WooCommerce formats the address
 	 */
 	public static function add_thana_to_formatted_address_string( $formatted_address, $args, $order ) {
-		// Debug logging
-		error_log( 'WAFM Debug - Formatted Address String Filter' );
-		error_log( 'WAFM Debug - Formatted Address Before: ' . $formatted_address );
-		
 		// Ensure we have a valid order object
 		if ( ! is_a( $order, 'WC_Order' ) ) {
-			error_log( 'WAFM Debug - Not a valid order object' );
 			return $formatted_address;
 		}
 		
@@ -774,10 +769,7 @@ class WAFM_Checkout_Fields {
 		$is_billing = current_filter() === 'woocommerce_order_get_formatted_billing_address';
 		$settings = $is_billing ? $billing_settings : $shipping_settings;
 		
-		error_log( 'WAFM Debug - Is Billing: ' . ( $is_billing ? 'yes' : 'no' ) );
-		
 		if ( ! $settings['enabled'] ) {
-			error_log( 'WAFM Debug - Settings not enabled' );
 			return $formatted_address;
 		}
 		
@@ -785,10 +777,7 @@ class WAFM_Checkout_Fields {
 		$meta_key = '_' . $settings['field_name'];
 		$thana_code = $order->get_meta( $meta_key );
 		
-		error_log( 'WAFM Debug - Thana Code: ' . $thana_code );
-		
 		if ( ! $thana_code ) {
-			error_log( 'WAFM Debug - No thana code found' );
 			return $formatted_address;
 		}
 		
@@ -796,19 +785,13 @@ class WAFM_Checkout_Fields {
 		$thana_name = self::get_thana_name_from_code( $thana_code );
 		$display_value = $thana_name ? $thana_name : $thana_code;
 		
-		error_log( 'WAFM Debug - Thana Display Value: ' . $display_value );
-		
 		// Get the state code to find where to insert thana (thana goes before state)
 		$state_code = $is_billing ? $order->get_billing_state() : $order->get_shipping_state();
-		
-		error_log( 'WAFM Debug - State Code: ' . $state_code );
 		
 		if ( $state_code ) {
 			// Add thana before state code line
 			// The state code appears as "BD-58" in the formatted address
 			$formatted_address = str_replace( '<br/>' . $state_code, '<br/>' . $display_value . '<br/>' . $state_code, $formatted_address );
-			
-			error_log( 'WAFM Debug - Formatted Address After: ' . $formatted_address );
 		}
 		
 		return $formatted_address;
