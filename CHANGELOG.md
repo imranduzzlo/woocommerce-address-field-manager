@@ -2,6 +2,70 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.36] - 2026-04-26
+
+### 🎯 The Perfect Solution - Option 4: Smart State Formatting
+
+**The Problem We Solved**:
+WooCommerce has a fundamental conflict:
+- **Dropdown needs:** State CODE (BD-58)
+- **Display needs:** State NAME (SATKHIRA)
+
+Previous attempts (v1.0.32-v1.0.35) tried various workarounds but had issues:
+- v1.0.32-v1.0.33: Stored names → dropdown broken
+- v1.0.34: Stored codes → new orders showed codes
+- v1.0.35: Fixed duplicate thana but state still showed as code for new orders
+
+**The Perfect Solution - Option 4**:
+Intercept WooCommerce's state getter and return the appropriate format based on context:
+
+```php
+add_filter('woocommerce_order_get_billing_state', 'format_state_for_display');
+add_filter('woocommerce_order_get_shipping_state', 'format_state_for_display');
+```
+
+**How It Works**:
+1. **Database stores:** `billing_state` = "BD-58" (code)
+2. **When WooCommerce reads state:**
+   - Admin edit form? → Return "BD-58" (code for dropdown)
+   - Display context? → Return "SATKHIRA" (formatted name)
+3. **Context detection:**
+   - Checks if we're in admin edit page
+   - Checks for AJAX save operations
+   - Everything else is display context
+
+**Result**: 
+- ✅ Database stores codes (data integrity)
+- ✅ Dropdown gets codes (works perfectly)
+- ✅ Display shows names (formatted everywhere)
+- ✅ Works for NEW orders immediately
+- ✅ Works for edited orders
+- ✅ Works in admin, thank you page, emails
+- ✅ No JavaScript needed
+- ✅ No cache issues
+- ✅ No duplicate data
+- ✅ Clean, WordPress-standard approach
+
+**What Changed**:
+- Added `format_state_for_display()` method with smart context detection
+- Hooked into `woocommerce_order_get_billing_state` and `woocommerce_order_get_shipping_state`
+- Removed JavaScript formatting (no longer needed)
+- Removed `format_admin_address_display()` method (handled by getter)
+- Removed `add_admin_address_formatting_script()` method (no longer needed)
+
+**Technical Details**:
+The filter intercepts every time WooCommerce reads the state:
+- Detects admin edit context (traditional post edit, HPOS edit, AJAX save)
+- Returns code for forms, name for display
+- Single source of truth (code in database)
+- Automatic formatting everywhere
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Added smart state formatting
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.36
+
+---
+
 ## [1.0.35] - 2026-04-26
 
 ### 🔧 Fixed Duplicate Thana Display

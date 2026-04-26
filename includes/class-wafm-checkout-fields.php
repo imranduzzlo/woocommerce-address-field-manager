@@ -49,6 +49,10 @@ class WAFM_Checkout_Fields {
 		add_action( 'added_post_meta', array( __CLASS__, 'clear_order_cache_on_meta_update' ), 10, 4 );
 		add_action( 'woocommerce_update_order_meta', array( __CLASS__, 'clear_order_cache_on_order_meta_update' ), 10, 3 );
 
+		// Format state for display (Option 4: Intercept state getter)
+		add_filter( 'woocommerce_order_get_billing_state', array( __CLASS__, 'format_state_for_display' ), 10, 2 );
+		add_filter( 'woocommerce_order_get_shipping_state', array( __CLASS__, 'format_state_for_display' ), 10, 2 );
+
 		// Register thana as WooCommerce address field
 		add_filter( 'woocommerce_get_customer_address_fields', array( __CLASS__, 'register_thana_address_field' ) );
 
@@ -85,13 +89,6 @@ class WAFM_Checkout_Fields {
 		// Clear session when user updates profile
 		add_action( 'personal_options_update', array( __CLASS__, 'clear_thana_session' ) );
 		add_action( 'edit_user_profile_update', array( __CLASS__, 'clear_thana_session' ) );
-
-		// Format address display in admin order page
-		add_filter( 'woocommerce_order_formatted_billing_address', array( __CLASS__, 'format_admin_address_display' ), 20, 2 );
-		add_filter( 'woocommerce_order_formatted_shipping_address', array( __CLASS__, 'format_admin_address_display' ), 20, 2 );
-		
-		// Add script to format address display in admin
-		add_action( 'admin_footer', array( __CLASS__, 'add_admin_address_formatting_script' ) );
 	}
 
 	/**
@@ -239,6 +236,43 @@ class WAFM_Checkout_Fields {
 	 */
 	public static function clear_cache_on_new_order( $order_id ) {
 		self::clear_all_order_caches( $order_id );
+	}
+
+	/**
+	 * Format state for display based on context (Option 4)
+	 * 
+	 * This intercepts when WooCommerce reads the state and returns:
+	 * - CODE (BD-58) for admin edit forms (dropdown needs code)
+	 * - NAME (SATKHIRA) for display (thank you page, emails, admin view)
+	 * 
+	 * @param string $state The state code from database
+	 * @param WC_Order $order The order object
+	 * @return string Formatted state (code or name based on context)
+	 */
+	public static function format_state_for_display( $state, $order ) {
+		// If state is empty or not a BD state code, return as-is
+		if ( ! $state || strpos( $state, 'BD-' ) !== 0 ) {
+			return $state;
+		}
+
+		// Detect context: Are we in admin edit form?
+		$is_admin_edit = is_admin() && (
+			// Traditional post edit
+			( isset( $_GET['post'] ) && isset( $_GET['action'] ) && $_GET['action'] === 'edit' ) ||
+			// HPOS edit
+			( isset( $_GET['page'] ) && $_GET['page'] === 'wc-orders' && isset( $_GET['action'] ) && $_GET['action'] === 'edit' ) ||
+			// AJAX save from admin
+			( defined( 'DOING_AJAX' ) && DOING_AJAX && isset( $_POST['action'] ) && $_POST['action'] === 'woocommerce_save_order_items' )
+		);
+
+		// If we're in admin edit form, return CODE (for dropdown to work)
+		if ( $is_admin_edit ) {
+			return $state; // Return code as-is
+		}
+
+		// For all display contexts (thank you page, emails, admin view), return formatted NAME
+		$states = WC()->countries->get_states( 'BD' );
+		return isset( $states[ $state ] ) ? $states[ $state ] : $state;
 	}
 
 	/**
@@ -769,115 +803,6 @@ class WAFM_Checkout_Fields {
 		
 		return $replacements;
 	}
-
-	/**
-	 * Format address display in admin order page
-	 * Converts state code to name and adds thana
-	 */
-	public static function format_admin_address_display( $address, $order ) {
-		// Ensure we have a valid order object
-		if ( ! is_a( $order, 'WC_Order' ) ) {
-			return $address;
-		}
-
-		// Check if this is billing or shipping
-		$is_billing = current_filter() === 'woocommerce_order_formatted_billing_address';
-		
-		// Convert state code to state name
-		if ( isset( $address['state'] ) && ! empty( $address['state'] ) && isset( $address['country'] ) && $address['country'] === 'BD' ) {
-			$states = WC()->countries->get_states( 'BD' );
-			if ( isset( $states[ $address['state'] ] ) ) {
-				$address['state'] = $states[ $address['state'] ];
-			}
-		}
-
-		return $address;
-	}
-
-	/**
-	 * Add script to format address display in admin order page
-	 */
-	public static function add_admin_address_formatting_script() {
-		$screen = get_current_screen();
-		if ( ! $screen || ( $screen->id !== 'shop_order' && $screen->id !== 'woocommerce_page_wc-orders' ) ) {
-			return;
-		}
-
-		global $post;
-		$order_id = $post ? $post->ID : ( isset( $_GET['id'] ) ? intval( $_GET['id'] ) : 0 );
-		if ( ! $order_id ) {
-			return;
-		}
-
-		$order = wc_get_order( $order_id );
-		if ( ! $order ) {
-			return;
-		}
-
-		// Get state codes and convert to names
-		$billing_state_code = $order->get_meta( '_billing_state' ) ?: $order->get_billing_state();
-		$shipping_state_code = $order->get_meta( '_shipping_state' ) ?: $order->get_shipping_state();
-		
-		$billing_state_name = '';
-		$shipping_state_name = '';
-		
-		if ( $billing_state_code && strpos( $billing_state_code, 'BD-' ) === 0 ) {
-			$states = WC()->countries->get_states( 'BD' );
-			$billing_state_name = $states[ $billing_state_code ] ?? '';
-		}
-		
-		if ( $shipping_state_code && strpos( $shipping_state_code, 'BD-' ) === 0 ) {
-			$states = WC()->countries->get_states( 'BD' );
-			$shipping_state_name = $states[ $shipping_state_code ] ?? '';
-		}
-
-		// Get thana codes and convert to names
-		$billing_settings = WAFM_Settings::get_billing_settings();
-		$shipping_settings = WAFM_Settings::get_shipping_settings();
-		
-		$billing_thana_code = $order->get_meta( '_' . $billing_settings['field_name'] );
-		$shipping_thana_code = $order->get_meta( '_' . $shipping_settings['field_name'] );
-		
-		$billing_thana_name = $billing_thana_code ? self::get_thana_name_from_code( $billing_thana_code ) : '';
-		$shipping_thana_name = $shipping_thana_code ? self::get_thana_name_from_code( $shipping_thana_code ) : '';
-		
-		?>
-		<script type="text/javascript">
-		jQuery(document).ready(function($) {
-			// Format billing address display
-			<?php if ( $billing_state_name ) : ?>
-			$('.order_data_column:first .address').each(function() {
-				var html = $(this).html();
-				html = html.replace('<?php echo esc_js( $billing_state_code ); ?>', '<?php echo esc_js( $billing_state_name ); ?>');
-				<?php if ( $billing_thana_name ) : ?>
-				// Add thana before state if not already there
-				if (html.indexOf('<?php echo esc_js( $billing_thana_name ); ?>') === -1) {
-					html = html.replace('<?php echo esc_js( $billing_state_name ); ?>', '<?php echo esc_js( $billing_thana_name ); ?><br><?php echo esc_js( $billing_state_name ); ?>');
-				}
-				<?php endif; ?>
-				$(this).html(html);
-			});
-			<?php endif; ?>
-			
-			// Format shipping address display
-			<?php if ( $shipping_state_name ) : ?>
-			$('.order_data_column:last .address').each(function() {
-				var html = $(this).html();
-				html = html.replace('<?php echo esc_js( $shipping_state_code ); ?>', '<?php echo esc_js( $shipping_state_name ); ?>');
-				<?php if ( $shipping_thana_name ) : ?>
-				// Add thana before state if not already there
-				if (html.indexOf('<?php echo esc_js( $shipping_thana_name ); ?>') === -1) {
-					html = html.replace('<?php echo esc_js( $shipping_state_name ); ?>', '<?php echo esc_js( $shipping_thana_name ); ?><br><?php echo esc_js( $shipping_state_name ); ?>');
-				}
-				<?php endif; ?>
-				$(this).html(html);
-			});
-			<?php endif; ?>
-		});
-		</script>
-		<?php
-	}
-
 	/**
 	 * Get thana data from JSON file
 	 */
