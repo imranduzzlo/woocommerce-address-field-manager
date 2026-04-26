@@ -2,6 +2,56 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.15] - 2026-04-26
+
+### 🔧 Fixed Cache Issues - Always Show Latest Data
+
+**Problem**: Thank you page and emails showed old/cached thana values after updates via webhooks or external systems
+
+**Root Cause**: 
+- WordPress object cache, WooCommerce order cache, and HPOS cache weren't being cleared properly
+- When webhooks or external systems updated order meta, the cached data persisted
+- Admin panel showed correct data (direct from DB) but frontend showed cached values
+
+**Solution - Comprehensive Cache Management**:
+1. **Direct Database Queries**: Bypass all caches by querying database directly
+2. **Multi-Layer Cache Clearing**: Clear WordPress, WooCommerce, and HPOS caches
+3. **Automatic Cache Invalidation**: Clear caches whenever thana meta is updated (any method)
+4. **HPOS Compatible**: Works with both traditional post meta and HPOS order meta
+
+### 🎯 Technical Implementation
+
+**New Helper Method: `get_fresh_order_meta()`**
+- Clears all possible caches first
+- Queries database directly (HPOS or traditional)
+- Tries both `_field_name` and `field_name` patterns
+- Fallback to WooCommerce methods if needed
+
+**New Helper Method: `clear_all_order_caches()`**
+- Clears WordPress object cache
+- Clears WooCommerce transients
+- Clears post cache
+- Clears HPOS cache (if enabled)
+
+**New Hooks for Auto Cache Clearing**:
+- `updated_post_meta` - Clears cache when post meta updated
+- `added_post_meta` - Clears cache when post meta added
+- `woocommerce_update_order_meta` - Clears cache when HPOS meta updated
+
+### ✅ What Works Now
+- ✅ Thank you page always shows latest thana data
+- ✅ Emails always show latest thana data
+- ✅ Works with webhook updates (Zapier, Make, etc.)
+- ✅ Works with REST API updates
+- ✅ Works with manual admin updates
+- ✅ Works with any external system that updates order meta
+- ✅ Compatible with both HPOS and traditional storage
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Added comprehensive cache management
+
+---
+
 ## [1.0.14] - 2026-04-26
 
 ### 🔧 Fixed GitHub Auto-Updater

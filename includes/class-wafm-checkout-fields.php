@@ -41,6 +41,11 @@ class WAFM_Checkout_Fields {
 		// HPOS save action
 		add_action( 'woocommerce_update_order', array( __CLASS__, 'save_thana_from_hpos_order' ), 10, 1 );
 
+		// Clear order cache when thana meta is updated (webhooks, external updates, etc.)
+		add_action( 'updated_post_meta', array( __CLASS__, 'clear_order_cache_on_meta_update' ), 10, 4 );
+		add_action( 'added_post_meta', array( __CLASS__, 'clear_order_cache_on_meta_update' ), 10, 4 );
+		add_action( 'woocommerce_update_order_meta', array( __CLASS__, 'clear_order_cache_on_order_meta_update' ), 10, 3 );
+
 		// Register thana as WooCommerce address field
 		add_filter( 'woocommerce_get_customer_address_fields', array( __CLASS__, 'register_thana_address_field' ) );
 
@@ -334,23 +339,8 @@ class WAFM_Checkout_Fields {
 			return $address;
 		}
 
-		// Get thana code from order meta using the field name - ALWAYS fetch fresh from database
-		$meta_key = '_' . $settings['field_name'];
-		$order_id = $order->get_id();
-		
-		// Clear any cached data for this order
-		wp_cache_delete( $order_id, 'post_meta' );
-		wp_cache_delete( 'wc_order_' . $order_id, 'orders' );
-		
-		// Force fresh read from database, bypass cache
-		$thana_code = get_post_meta( $order_id, $meta_key, true );
-		
-		// If using HPOS, also try the order meta method
-		if ( ! $thana_code && method_exists( $order, 'get_meta' ) ) {
-			// Refresh order data from database
-			$order = wc_get_order( $order_id );
-			$thana_code = $order->get_meta( $meta_key, true, 'edit' ); // 'edit' context bypasses formatting
-		}
+		// Get thana code - use comprehensive cache clearing approach
+		$thana_code = self::get_fresh_order_meta( $order, $settings['field_name'] );
 
 		if ( ! $thana_code ) {
 			return $address;
@@ -749,25 +739,10 @@ class WAFM_Checkout_Fields {
 
 		// Collect thana fields to display
 		$thana_fields = array();
-		$order_id = $order->get_id();
-		
-		// Clear any cached data for this order
-		wp_cache_delete( $order_id, 'post_meta' );
-		wp_cache_delete( 'wc_order_' . $order_id, 'orders' );
 
-		// Check billing thana - ALWAYS fetch fresh from database
+		// Check billing thana - use comprehensive cache clearing
 		if ( $billing_settings['enabled'] ) {
-			$meta_key = '_' . $billing_settings['field_name'];
-			
-			// Force fresh read from database
-			$thana_code = get_post_meta( $order_id, $meta_key, true );
-			
-			// If using HPOS, also try the order meta method
-			if ( ! $thana_code && method_exists( $order, 'get_meta' ) ) {
-				// Refresh order data from database
-				$order = wc_get_order( $order_id );
-				$thana_code = $order->get_meta( $meta_key, true, 'edit' );
-			}
+			$thana_code = self::get_fresh_order_meta( $order, $billing_settings['field_name'] );
 			
 			if ( $thana_code ) {
 				$thana_name = self::get_thana_name_from_code( $thana_code );
@@ -779,19 +754,9 @@ class WAFM_Checkout_Fields {
 			}
 		}
 
-		// Check shipping thana - ALWAYS fetch fresh from database
+		// Check shipping thana - use comprehensive cache clearing
 		if ( $shipping_settings['enabled'] ) {
-			$meta_key = '_' . $shipping_settings['field_name'];
-			
-			// Force fresh read from database
-			$thana_code = get_post_meta( $order_id, $meta_key, true );
-			
-			// If using HPOS, also try the order meta method
-			if ( ! $thana_code && method_exists( $order, 'get_meta' ) ) {
-				// Refresh order data from database
-				$order = wc_get_order( $order_id );
-				$thana_code = $order->get_meta( $meta_key, true, 'edit' );
-			}
+			$thana_code = self::get_fresh_order_meta( $order, $shipping_settings['field_name'] );
 			
 			if ( $thana_code ) {
 				$thana_name = self::get_thana_name_from_code( $thana_code );
@@ -964,11 +929,6 @@ class WAFM_Checkout_Fields {
 			
 			// Also save without underscore
 			update_post_meta( $post_id, $billing_settings['field_name'], $billing_thana );
-			
-			// Clear cache for this order
-			wp_cache_delete( $post_id, 'post_meta' );
-			wp_cache_delete( 'wc_order_' . $post_id, 'orders' );
-			clean_post_cache( $post_id );
 		}
 
 		// Save shipping thana - BOTH patterns
@@ -980,12 +940,10 @@ class WAFM_Checkout_Fields {
 			
 			// Also save without underscore
 			update_post_meta( $post_id, $shipping_settings['field_name'], $shipping_thana );
-			
-			// Clear cache for this order
-			wp_cache_delete( $post_id, 'post_meta' );
-			wp_cache_delete( 'wc_order_' . $post_id, 'orders' );
-			clean_post_cache( $post_id );
 		}
+		
+		// Clear all caches for this order
+		self::clear_all_order_caches( $post_id );
 	}
 
 	/**
@@ -1284,11 +1242,153 @@ class WAFM_Checkout_Fields {
 
 		$order->save();
 		
-		// Clear caches
-		wp_cache_delete( $order_id, 'post_meta' );
-		wp_cache_delete( 'wc_order_' . $order_id, 'orders' );
+		// Clear all caches for this order
+		self::clear_all_order_caches( $order_id );
 		
 		// Re-add the action for next time
 		add_action( 'woocommerce_update_order', array( __CLASS__, 'save_thana_from_hpos_order' ), 10, 1 );
+	}
+
+	/**
+	 * Get fresh order meta bypassing all caches
+	 * This ensures we always get the latest data from database
+	 */
+	private static function get_fresh_order_meta( $order, $field_name ) {
+		$order_id = $order->get_id();
+		$meta_key = '_' . $field_name;
+		
+		// Clear ALL possible caches for this order
+		self::clear_all_order_caches( $order_id );
+		
+		// Try multiple methods to get the freshest data
+		$thana_code = '';
+		
+		// Method 1: Direct database query (most reliable)
+		global $wpdb;
+		
+		// Check if HPOS is enabled
+		$hpos_enabled = class_exists( '\Automattic\WooCommerce\Utilities\OrderUtil' ) 
+			&& \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled();
+		
+		if ( $hpos_enabled ) {
+			// HPOS: Query from wc_orders_meta table
+			$table = $wpdb->prefix . 'wc_orders_meta';
+			$thana_code = $wpdb->get_var( $wpdb->prepare(
+				"SELECT meta_value FROM {$table} WHERE order_id = %d AND meta_key = %s ORDER BY meta_id DESC LIMIT 1",
+				$order_id,
+				$meta_key
+			) );
+			
+			// Try without underscore if not found
+			if ( ! $thana_code ) {
+				$thana_code = $wpdb->get_var( $wpdb->prepare(
+					"SELECT meta_value FROM {$table} WHERE order_id = %d AND meta_key = %s ORDER BY meta_id DESC LIMIT 1",
+					$order_id,
+					$field_name
+				) );
+			}
+		} else {
+			// Traditional: Query from postmeta table
+			$thana_code = $wpdb->get_var( $wpdb->prepare(
+				"SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = %s ORDER BY meta_id DESC LIMIT 1",
+				$order_id,
+				$meta_key
+			) );
+			
+			// Try without underscore if not found
+			if ( ! $thana_code ) {
+				$thana_code = $wpdb->get_var( $wpdb->prepare(
+					"SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = %s ORDER BY meta_id DESC LIMIT 1",
+					$order_id,
+					$field_name
+				) );
+			}
+		}
+		
+		// Method 2: Fallback to WooCommerce methods if direct query fails
+		if ( ! $thana_code ) {
+			// Refresh order object from database
+			$fresh_order = wc_get_order( $order_id );
+			if ( $fresh_order ) {
+				$thana_code = $fresh_order->get_meta( $meta_key, true, 'edit' );
+				if ( ! $thana_code ) {
+					$thana_code = $fresh_order->get_meta( $field_name, true, 'edit' );
+				}
+			}
+		}
+		
+		return $thana_code;
+	}
+
+	/**
+	 * Clear all possible caches for an order
+	 */
+	private static function clear_all_order_caches( $order_id ) {
+		// Clear WordPress object cache
+		wp_cache_delete( $order_id, 'post_meta' );
+		wp_cache_delete( $order_id, 'posts' );
+		wp_cache_delete( 'wc_order_' . $order_id, 'orders' );
+		
+		// Clear WooCommerce specific caches
+		if ( function_exists( 'wc_delete_shop_order_transients' ) ) {
+			wc_delete_shop_order_transients( $order_id );
+		}
+		
+		// Clear post cache
+		clean_post_cache( $order_id );
+		
+		// Clear HPOS cache if enabled
+		if ( class_exists( '\Automattic\WooCommerce\Utilities\OrderUtil' ) ) {
+			wp_cache_delete( 'order-' . $order_id, 'orders' );
+			wp_cache_delete( $order_id, 'order-meta' );
+		}
+	}
+
+	/**
+	 * Clear order cache when thana meta is updated via post meta (webhooks, external updates)
+	 */
+	public static function clear_order_cache_on_meta_update( $meta_id, $object_id, $meta_key, $meta_value ) {
+		// Check if this is a thana field
+		$billing_settings = WAFM_Settings::get_billing_settings();
+		$shipping_settings = WAFM_Settings::get_shipping_settings();
+		
+		$is_thana_field = false;
+		if ( $billing_settings['enabled'] && ( $meta_key === '_' . $billing_settings['field_name'] || $meta_key === $billing_settings['field_name'] ) ) {
+			$is_thana_field = true;
+		}
+		if ( $shipping_settings['enabled'] && ( $meta_key === '_' . $shipping_settings['field_name'] || $meta_key === $shipping_settings['field_name'] ) ) {
+			$is_thana_field = true;
+		}
+		
+		if ( ! $is_thana_field ) {
+			return;
+		}
+		
+		// Check if this is an order
+		$post_type = get_post_type( $object_id );
+		if ( $post_type === 'shop_order' || $post_type === 'shop_order_placehold' ) {
+			self::clear_all_order_caches( $object_id );
+		}
+	}
+
+	/**
+	 * Clear order cache when thana meta is updated via WooCommerce order meta (HPOS)
+	 */
+	public static function clear_order_cache_on_order_meta_update( $order_id, $meta_key, $meta_value ) {
+		// Check if this is a thana field
+		$billing_settings = WAFM_Settings::get_billing_settings();
+		$shipping_settings = WAFM_Settings::get_shipping_settings();
+		
+		$is_thana_field = false;
+		if ( $billing_settings['enabled'] && ( $meta_key === '_' . $billing_settings['field_name'] || $meta_key === $billing_settings['field_name'] ) ) {
+			$is_thana_field = true;
+		}
+		if ( $shipping_settings['enabled'] && ( $meta_key === '_' . $shipping_settings['field_name'] || $meta_key === $shipping_settings['field_name'] ) ) {
+			$is_thana_field = true;
+		}
+		
+		if ( $is_thana_field ) {
+			self::clear_all_order_caches( $order_id );
+		}
 	}
 }
