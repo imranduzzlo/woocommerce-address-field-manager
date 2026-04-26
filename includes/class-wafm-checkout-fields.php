@@ -1133,6 +1133,67 @@ class WAFM_Checkout_Fields {
 				</p>
 			<?php endif; ?>
 		</div>
+		<script type="text/javascript">
+		jQuery(function($) {
+			// Thana data
+			var thanaData = <?php echo wp_json_encode( $thana_data ); ?>;
+			
+			// Function to update thana field based on country/state
+			function updateThanaField(type) {
+				var countryField = $('#_' + type + '_country');
+				var stateField = $('#_' + type + '_state');
+				var thanaField = $('#_<?php echo esc_js( $type === 'billing' ? $billing_settings['field_name'] : $shipping_settings['field_name'] ); ?>');
+				
+				if (!thanaField.length) return;
+				
+				var country = countryField.val();
+				var state = stateField.val();
+				var currentValue = thanaField.val();
+				
+				// Check if state is BD
+				var isBD = state && state.toString().indexOf('BD-') === 0;
+				
+				if (isBD && thanaData[state]) {
+					// Convert to select if needed
+					if (!thanaField.is('select')) {
+						var selectHtml = '<select id="' + thanaField.attr('id') + '" name="' + thanaField.attr('name') + '" class="wc-enhanced-select" style="width: 100%;"><option value="">Select Thana</option>';
+						$.each(thanaData[state], function(code, name) {
+							var selected = (code === currentValue) ? ' selected' : '';
+							selectHtml += '<option value="' + code + '"' + selected + '>' + name + '</option>';
+						});
+						selectHtml += '</select>';
+						thanaField.replaceWith(selectHtml);
+						$('#_<?php echo esc_js( $type === 'billing' ? $billing_settings['field_name'] : $shipping_settings['field_name'] ); ?>').selectWoo();
+					} else {
+						// Update options
+						thanaField.find('option:not(:first)').remove();
+						$.each(thanaData[state], function(code, name) {
+							thanaField.append('<option value="' + code + '">' + name + '</option>');
+						});
+						if (currentValue) {
+							thanaField.val(currentValue);
+						}
+						thanaField.trigger('change');
+					}
+				} else {
+					// Convert to input if needed
+					if (thanaField.is('select')) {
+						var inputHtml = '<input type="text" id="' + thanaField.attr('id') + '" name="' + thanaField.attr('name') + '" value="' + currentValue + '" style="width: 100%;" placeholder="<?php echo esc_js( $type === 'billing' ? $billing_settings['placeholder_input'] : $shipping_settings['placeholder_input'] ); ?>" />';
+						thanaField.replaceWith(inputHtml);
+					}
+				}
+			}
+			
+			// Listen for country/state changes
+			$(document).on('change', '#_billing_country, #_billing_state', function() {
+				updateThanaField('billing');
+			});
+			
+			$(document).on('change', '#_shipping_country, #_shipping_state', function() {
+				updateThanaField('shipping');
+			});
+		});
+		</script>
 		<?php
 	}
 
@@ -1140,10 +1201,18 @@ class WAFM_Checkout_Fields {
 	 * Save thana from HPOS order
 	 */
 	public static function save_thana_from_hpos_order( $order_id ) {
-		// Verify nonce
-		if ( ! isset( $_POST['wafm_thana_nonce'] ) || ! wp_verify_nonce( $_POST['wafm_thana_nonce'], 'wafm_save_thana_meta_box' ) ) {
+		// Prevent infinite loop - only run when form is submitted
+		if ( ! isset( $_POST['wafm_thana_nonce'] ) ) {
 			return;
 		}
+		
+		// Verify nonce
+		if ( ! wp_verify_nonce( $_POST['wafm_thana_nonce'], 'wafm_save_thana_meta_box' ) ) {
+			return;
+		}
+
+		// Prevent infinite loop - remove this action temporarily
+		remove_action( 'woocommerce_update_order', array( __CLASS__, 'save_thana_from_hpos_order' ), 10 );
 
 		$order = wc_get_order( $order_id );
 		if ( ! $order ) {
@@ -1180,5 +1249,8 @@ class WAFM_Checkout_Fields {
 		// Clear caches
 		wp_cache_delete( $order_id, 'post_meta' );
 		wp_cache_delete( 'wc_order_' . $order_id, 'orders' );
+		
+		// Re-add the action for next time
+		add_action( 'woocommerce_update_order', array( __CLASS__, 'save_thana_from_hpos_order' ), 10, 1 );
 	}
 }
