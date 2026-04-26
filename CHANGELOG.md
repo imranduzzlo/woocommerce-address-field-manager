@@ -2,6 +2,26 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.42] - 2026-04-26
+
+### 🔧 Enhanced Debug Logging
+
+Added comprehensive console logging to debug why thana isn't showing:
+- Logs when script loads
+- Logs order ID
+- Logs thana values
+- Logs if address elements are found
+- Logs the actual HTML content
+- Logs each step of the replacement process
+
+This will help identify exactly where the issue is.
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Enhanced logging
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.42
+
+---
+
 ## [1.0.41] - 2026-04-26
 
 ### 🔧 Fixed State Case Matching in JavaScript

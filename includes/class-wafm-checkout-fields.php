@@ -995,15 +995,28 @@ class WAFM_Checkout_Fields {
 		
 		?>
 		<script type="text/javascript">
+		console.log('WAFM: Thana injection script loaded');
+		console.log('WAFM: Order ID:', <?php echo $order_id; ?>);
+		console.log('WAFM: Billing thana:', '<?php echo esc_js( $billing_thana_name ); ?>');
+		console.log('WAFM: Shipping thana:', '<?php echo esc_js( $shipping_thana_name ); ?>');
+		
 		jQuery(document).ready(function($) {
+			console.log('WAFM: jQuery ready');
+			
+			// Find address columns
+			var billingColumn = $('.order_data_column').eq(0);
+			var shippingColumn = $('.order_data_column').eq(1);
+			
+			console.log('WAFM: Billing column found:', billingColumn.length > 0);
+			console.log('WAFM: Shipping column found:', shippingColumn.length > 0);
+			
 			<?php if ( $billing_thana_name ) : ?>
 			// Inject billing thana before state
-			$('.order_data_column:first .address').each(function() {
-				var $address = $(this);
-				var html = $address.html();
-				
-				console.log('Billing address HTML:', html);
-				console.log('Looking for thana:', '<?php echo esc_js( $billing_thana_name ); ?>');
+			var $billingAddress = billingColumn.find('.address');
+			if ($billingAddress.length > 0) {
+				var html = $billingAddress.html();
+				console.log('WAFM: Billing address HTML:', html);
+				console.log('WAFM: Looking for billing thana:', '<?php echo esc_js( $billing_thana_name ); ?>');
 				
 				// Check if thana is already there
 				if (html.indexOf('<?php echo esc_js( $billing_thana_name ); ?>') === -1) {
@@ -1012,9 +1025,9 @@ class WAFM_Checkout_Fields {
 					var stateTitle = '<?php echo esc_js( ucwords( strtolower( $billing_state_name ) ) ); ?>';
 					var stateOriginal = '<?php echo esc_js( $billing_state_name ); ?>';
 					
-					console.log('Looking for state (upper):', stateUpper);
-					console.log('Looking for state (title):', stateTitle);
-					console.log('Looking for state (original):', stateOriginal);
+					console.log('WAFM: Looking for state (upper):', stateUpper);
+					console.log('WAFM: Looking for state (title):', stateTitle);
+					console.log('WAFM: Looking for state (original):', stateOriginal);
 					
 					var replaced = false;
 					
@@ -1022,43 +1035,44 @@ class WAFM_Checkout_Fields {
 					if (!replaced && html.indexOf(stateUpper) !== -1) {
 						html = html.replace(stateUpper, '<?php echo esc_js( $billing_thana_name ); ?><br/>' + stateUpper);
 						replaced = true;
-						console.log('Replaced with uppercase state');
+						console.log('WAFM: Replaced with uppercase state');
 					}
 					
 					// Try title case (Satkhira)
 					if (!replaced && html.indexOf(stateTitle) !== -1) {
 						html = html.replace(stateTitle, '<?php echo esc_js( $billing_thana_name ); ?><br/>' + stateTitle);
 						replaced = true;
-						console.log('Replaced with title case state');
+						console.log('WAFM: Replaced with title case state');
 					}
 					
 					// Try original
 					if (!replaced && html.indexOf(stateOriginal) !== -1) {
 						html = html.replace(stateOriginal, '<?php echo esc_js( $billing_thana_name ); ?><br/>' + stateOriginal);
 						replaced = true;
-						console.log('Replaced with original state');
+						console.log('WAFM: Replaced with original state');
 					}
 					
 					if (replaced) {
-						$address.html(html);
-						console.log('Updated billing address');
+						$billingAddress.html(html);
+						console.log('WAFM: Updated billing address');
 					} else {
-						console.log('Could not find state to replace');
+						console.log('WAFM: Could not find state to replace in billing');
 					}
 				} else {
-					console.log('Thana already in address');
+					console.log('WAFM: Thana already in billing address');
 				}
-			});
+			} else {
+				console.log('WAFM: Billing address element not found');
+			}
 			<?php endif; ?>
 			
 			<?php if ( $shipping_thana_name ) : ?>
 			// Inject shipping thana before state
-			$('.order_data_column:last .address').each(function() {
-				var $address = $(this);
-				var html = $address.html();
-				
-				console.log('Shipping address HTML:', html);
-				console.log('Looking for thana:', '<?php echo esc_js( $shipping_thana_name ); ?>');
+			var $shippingAddress = shippingColumn.find('.address');
+			if ($shippingAddress.length > 0) {
+				var html = $shippingAddress.html();
+				console.log('WAFM: Shipping address HTML:', html);
+				console.log('WAFM: Looking for shipping thana:', '<?php echo esc_js( $shipping_thana_name ); ?>');
 				
 				// Check if thana is already there
 				if (html.indexOf('<?php echo esc_js( $shipping_thana_name ); ?>') === -1) {
@@ -1067,9 +1081,9 @@ class WAFM_Checkout_Fields {
 					var stateTitle = '<?php echo esc_js( ucwords( strtolower( $shipping_state_name ) ) ); ?>';
 					var stateOriginal = '<?php echo esc_js( $shipping_state_name ); ?>';
 					
-					console.log('Looking for state (upper):', stateUpper);
-					console.log('Looking for state (title):', stateTitle);
-					console.log('Looking for state (original):', stateOriginal);
+					console.log('WAFM: Looking for state (upper):', stateUpper);
+					console.log('WAFM: Looking for state (title):', stateTitle);
+					console.log('WAFM: Looking for state (original):', stateOriginal);
 					
 					var replaced = false;
 					
@@ -1077,33 +1091,35 @@ class WAFM_Checkout_Fields {
 					if (!replaced && html.indexOf(stateUpper) !== -1) {
 						html = html.replace(stateUpper, '<?php echo esc_js( $shipping_thana_name ); ?><br/>' + stateUpper);
 						replaced = true;
-						console.log('Replaced with uppercase state');
+						console.log('WAFM: Replaced with uppercase state');
 					}
 					
 					// Try title case (Satkhira)
 					if (!replaced && html.indexOf(stateTitle) !== -1) {
 						html = html.replace(stateTitle, '<?php echo esc_js( $shipping_thana_name ); ?><br/>' + stateTitle);
 						replaced = true;
-						console.log('Replaced with title case state');
+						console.log('WAFM: Replaced with title case state');
 					}
 					
 					// Try original
 					if (!replaced && html.indexOf(stateOriginal) !== -1) {
 						html = html.replace(stateOriginal, '<?php echo esc_js( $shipping_thana_name ); ?><br/>' + stateOriginal);
 						replaced = true;
-						console.log('Replaced with original state');
+						console.log('WAFM: Replaced with original state');
 					}
 					
 					if (replaced) {
-						$address.html(html);
-						console.log('Updated shipping address');
+						$shippingAddress.html(html);
+						console.log('WAFM: Updated shipping address');
 					} else {
-						console.log('Could not find state to replace');
+						console.log('WAFM: Could not find state to replace in shipping');
 					}
 				} else {
-					console.log('Thana already in address');
+					console.log('WAFM: Thana already in shipping address');
 				}
-			});
+			} else {
+				console.log('WAFM: Shipping address element not found');
+			}
 			<?php endif; ?>
 		});
 		</script>
