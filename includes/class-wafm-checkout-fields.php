@@ -24,9 +24,6 @@ class WAFM_Checkout_Fields {
 		// Save thana fields
 		add_action( 'woocommerce_checkout_process', array( __CLASS__, 'validate_thana_fields' ) );
 		add_action( 'woocommerce_checkout_update_order_meta', array( __CLASS__, 'save_thana_fields' ) );
-		
-		// Process address data after order is created to format state and add thana display values
-		add_action( 'woocommerce_checkout_order_created', array( __CLASS__, 'process_order_address_on_creation' ), 20, 1 );
 
 		// Make thana editable in admin order page - DISABLED (using meta box instead)
 		// add_filter( 'woocommerce_admin_billing_fields', array( __CLASS__, 'add_editable_billing_thana_to_order_admin' ) );
@@ -89,6 +86,9 @@ class WAFM_Checkout_Fields {
 		// Format address display in admin order page
 		add_filter( 'woocommerce_order_formatted_billing_address', array( __CLASS__, 'format_admin_address_display' ), 20, 2 );
 		add_filter( 'woocommerce_order_formatted_shipping_address', array( __CLASS__, 'format_admin_address_display' ), 20, 2 );
+		
+		// Add script to format address display in admin
+		add_action( 'admin_footer', array( __CLASS__, 'add_admin_address_formatting_script' ) );
 	}
 
 	/**
@@ -229,66 +229,6 @@ class WAFM_Checkout_Fields {
 		}
 
 		return $store_country;
-	}
-
-	/**
-	 * Process order address on creation to format state and add thana display values
-	 * This ensures new orders show formatted addresses immediately
-	 */
-	public static function process_order_address_on_creation( $order ) {
-		if ( ! is_a( $order, 'WC_Order' ) ) {
-			return;
-		}
-
-		$billing_settings = WAFM_Settings::get_billing_settings();
-		$shipping_settings = WAFM_Settings::get_shipping_settings();
-
-		// Process billing address
-		$billing_state = $order->get_billing_state();
-		if ( $billing_state && strpos( $billing_state, 'BD-' ) === 0 ) {
-			// Convert state code to name
-			$states = WC()->countries->get_states( 'BD' );
-			if ( isset( $states[ $billing_state ] ) ) {
-				$order->set_billing_state( $states[ $billing_state ] );
-			}
-		}
-
-		// Process billing thana - convert code to name and set as city
-		if ( $billing_settings['enabled'] ) {
-			$thana_code = $order->get_meta( '_' . $billing_settings['field_name'] );
-			if ( $thana_code ) {
-				$thana_name = self::get_thana_name_from_code( $thana_code );
-				if ( $thana_name ) {
-					// Set thana name as city for display
-					$order->set_billing_city( $thana_name );
-				}
-			}
-		}
-
-		// Process shipping address
-		$shipping_state = $order->get_shipping_state();
-		if ( $shipping_state && strpos( $shipping_state, 'BD-' ) === 0 ) {
-			// Convert state code to name
-			$states = WC()->countries->get_states( 'BD' );
-			if ( isset( $states[ $shipping_state ] ) ) {
-				$order->set_shipping_state( $states[ $shipping_state ] );
-			}
-		}
-
-		// Process shipping thana - convert code to name and set as city
-		if ( $shipping_settings['enabled'] ) {
-			$thana_code = $order->get_meta( '_' . $shipping_settings['field_name'] );
-			if ( $thana_code ) {
-				$thana_name = self::get_thana_name_from_code( $thana_code );
-				if ( $thana_name ) {
-					// Set thana name as city for display
-					$order->set_shipping_city( $thana_name );
-				}
-			}
-		}
-
-		// Save the order with updated values
-		$order->save();
 	}
 
 	/**
@@ -833,6 +773,90 @@ class WAFM_Checkout_Fields {
 		}
 
 		return $address;
+	}
+
+	/**
+	 * Add script to format address display in admin order page
+	 */
+	public static function add_admin_address_formatting_script() {
+		$screen = get_current_screen();
+		if ( ! $screen || ( $screen->id !== 'shop_order' && $screen->id !== 'woocommerce_page_wc-orders' ) ) {
+			return;
+		}
+
+		global $post;
+		$order_id = $post ? $post->ID : ( isset( $_GET['id'] ) ? intval( $_GET['id'] ) : 0 );
+		if ( ! $order_id ) {
+			return;
+		}
+
+		$order = wc_get_order( $order_id );
+		if ( ! $order ) {
+			return;
+		}
+
+		// Get state codes and convert to names
+		$billing_state_code = $order->get_meta( '_billing_state' ) ?: $order->get_billing_state();
+		$shipping_state_code = $order->get_meta( '_shipping_state' ) ?: $order->get_shipping_state();
+		
+		$billing_state_name = '';
+		$shipping_state_name = '';
+		
+		if ( $billing_state_code && strpos( $billing_state_code, 'BD-' ) === 0 ) {
+			$states = WC()->countries->get_states( 'BD' );
+			$billing_state_name = $states[ $billing_state_code ] ?? '';
+		}
+		
+		if ( $shipping_state_code && strpos( $shipping_state_code, 'BD-' ) === 0 ) {
+			$states = WC()->countries->get_states( 'BD' );
+			$shipping_state_name = $states[ $shipping_state_code ] ?? '';
+		}
+
+		// Get thana codes and convert to names
+		$billing_settings = WAFM_Settings::get_billing_settings();
+		$shipping_settings = WAFM_Settings::get_shipping_settings();
+		
+		$billing_thana_code = $order->get_meta( '_' . $billing_settings['field_name'] );
+		$shipping_thana_code = $order->get_meta( '_' . $shipping_settings['field_name'] );
+		
+		$billing_thana_name = $billing_thana_code ? self::get_thana_name_from_code( $billing_thana_code ) : '';
+		$shipping_thana_name = $shipping_thana_code ? self::get_thana_name_from_code( $shipping_thana_code ) : '';
+		
+		?>
+		<script type="text/javascript">
+		jQuery(document).ready(function($) {
+			// Format billing address
+			<?php if ( $billing_state_name ) : ?>
+			$('.order_data_column:first .address').each(function() {
+				var html = $(this).html();
+				html = html.replace('<?php echo esc_js( $billing_state_code ); ?>', '<?php echo esc_js( $billing_state_name ); ?>');
+				<?php if ( $billing_thana_name ) : ?>
+				// Add thana before state if not already there
+				if (html.indexOf('<?php echo esc_js( $billing_thana_name ); ?>') === -1) {
+					html = html.replace('<?php echo esc_js( $billing_state_name ); ?>', '<?php echo esc_js( $billing_thana_name ); ?><br><?php echo esc_js( $billing_state_name ); ?>');
+				}
+				<?php endif; ?>
+				$(this).html(html);
+			});
+			<?php endif; ?>
+			
+			// Format shipping address
+			<?php if ( $shipping_state_name ) : ?>
+			$('.order_data_column:last .address').each(function() {
+				var html = $(this).html();
+				html = html.replace('<?php echo esc_js( $shipping_state_code ); ?>', '<?php echo esc_js( $shipping_state_name ); ?>');
+				<?php if ( $shipping_thana_name ) : ?>
+				// Add thana before state if not already there
+				if (html.indexOf('<?php echo esc_js( $shipping_thana_name ); ?>') === -1) {
+					html = html.replace('<?php echo esc_js( $shipping_state_name ); ?>', '<?php echo esc_js( $shipping_thana_name ); ?><br><?php echo esc_js( $shipping_state_name ); ?>');
+				}
+				<?php endif; ?>
+				$(this).html(html);
+			});
+			<?php endif; ?>
+		});
+		</script>
+		<?php
 	}
 
 	/**

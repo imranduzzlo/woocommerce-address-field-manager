@@ -2,7 +2,40 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
-## [1.0.29] - 2026-04-26
+## [1.0.30] - 2026-04-26
+
+### 🔧 Fixed Address Display - Keep Codes in Database, Format for Display Only
+
+**Problem with v1.0.29**: 
+- It was storing NAMES in database instead of CODES
+- This breaks data integrity and integrations
+
+**Correct Solution (v1.0.30)**:
+- ✅ Store CODES in database (BD-58, BD-58-05)
+- ✅ Format for DISPLAY only using JavaScript in admin
+- ✅ Format for display on thank you page/emails using filters
+
+**How it works**:
+- Database stores: `billing_state` = "BD-58", `_billing_thana` = "BD-58-05"
+- Admin display shows: "Satkhira Sadar" + "SATKHIRA" (formatted via JavaScript)
+- Thank you page shows: formatted via WooCommerce filters
+- Data integrity maintained!
+
+**Technical Details**:
+- Removed `process_order_address_on_creation()` method (was changing stored data)
+- Added `add_admin_address_formatting_script()` method
+- Uses JavaScript to format address display in admin after page load
+- Converts state codes to names client-side
+- Adds thana names to display client-side
+- Database remains unchanged with codes
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Reverted v1.0.29, added JS formatting
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.30
+
+---
+
+## [1.0.29] - 2026-04-26 [DEPRECATED]
 
 ### 🔧 Fixed New Order Address Display
 
