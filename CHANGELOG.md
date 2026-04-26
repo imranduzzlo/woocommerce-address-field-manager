@@ -2,6 +2,40 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.7] - 2026-04-26
+
+### 🐛 Critical Fixes
+
+**Meta Box Improvements**
+- Fixed billing thana showing text input instead of dropdown
+- Added debug information showing country/state values in meta box
+- Now reads thana values from both `_billing_thana` and `billing_thana` patterns
+- Saves to both patterns for maximum compatibility
+
+**Save Functionality**
+- Now saves thana to BOTH `_field_name` and `field_name` patterns
+- Fixes issue where some systems only read one pattern
+- Ensures data is accessible regardless of how WooCommerce queries it
+- Added proper cache clearing after save
+
+**Infinite Loading Fix**
+- Disabled conflicting `woocommerce_admin_billing_fields` and `woocommerce_admin_shipping_fields` filters
+- These filters were causing blank select fields and infinite loading
+- Meta box is now the only method for editing thana in admin
+- Eliminates JavaScript conflicts and loading issues
+
+### 🔧 Technical Details
+- Reads from both meta patterns: `_billing_thana` OR `billing_thana`
+- Saves to both meta patterns for compatibility
+- Added HTML comments with debug info (view page source to see)
+- Shows country/state values below input fields for troubleshooting
+- Removed duplicate field rendering that caused conflicts
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Multiple fixes for meta box and save functions
+
+---
+
 ## [1.0.6] - 2026-04-26
 
 ### 🔧 Maintenance Release
