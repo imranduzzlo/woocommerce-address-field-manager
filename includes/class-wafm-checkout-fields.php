@@ -343,6 +343,13 @@ class WAFM_Checkout_Fields {
 		$meta_key = '_' . $settings['field_name'];
 		$thana_code = $order->get_meta( $meta_key );
 
+		// Debug: Log what we're getting
+		error_log( 'WAFM Debug - Filter: ' . current_filter() );
+		error_log( 'WAFM Debug - Field name: ' . $settings['field_name'] );
+		error_log( 'WAFM Debug - Meta key: ' . $meta_key );
+		error_log( 'WAFM Debug - Thana code: ' . $thana_code );
+		error_log( 'WAFM Debug - Address array keys: ' . implode( ', ', array_keys( $address ) ) );
+
 		if ( ! $thana_code ) {
 			return $address;
 		}
@@ -353,6 +360,8 @@ class WAFM_Checkout_Fields {
 		
 		// Add thana to address array with the field name as key
 		$address[ $settings['field_name'] ] = $display_value;
+		
+		error_log( 'WAFM Debug - Added to address: ' . $settings['field_name'] . ' = ' . $display_value );
 
 		return $address;
 	}
