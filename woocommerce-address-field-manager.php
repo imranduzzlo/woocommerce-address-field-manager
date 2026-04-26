@@ -3,7 +3,7 @@
  * Plugin Name: WooCommerce Address Field Manager
  * Plugin URI: https://github.com/imranduzzlo/woocommerce-address-field-manager
  * Description: Dynamic address field manager for WooCommerce - Add custom locality/sub-district fields that adapt to any country
- * Version: 1.0.13
+ * Version: 1.0.14
  * Author: Imran Hossain
  * Author URI: https://imranhossain.me
  * License: GPL v2 or later
@@ -24,12 +24,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Define plugin constants
 define( 'WAFM_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WAFM_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'WAFM_PLUGIN_VERSION', '1.0.13' );
+define( 'WAFM_PLUGIN_VERSION', '1.0.14' );
 
 // ============================================================================
 // LOAD GITHUB UPDATER EARLY (works even when plugin is inactive)
 // ============================================================================
 require_once WAFM_PLUGIN_DIR . 'includes/class-github-updater.php';
+new WAFM_GitHub_Updater( __FILE__ );
 
 // Declare WooCommerce HPOS compatibility
 add_action( 'before_woocommerce_init', function() {

@@ -2,7 +2,7 @@
 /**
  * GitHub Plugin Updater
  * Enables automatic updates from GitHub repository
- * Based on WordPress best practices and proper update_plugins_{$hostname} filter
+ * Uses WordPress standard update system with proper hooks
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -18,6 +18,7 @@ class WAFM_GitHub_Updater {
 	private $github_repo;
 	private $github_url;
 	private $plugin_data;
+	private $github_token;
 
 	public function __construct( $file ) {
 		$this->file = $file;
@@ -43,6 +44,12 @@ class WAFM_GitHub_Updater {
 			}
 		}
 		
+		// Optional: Load GitHub token for private repos or higher rate limits
+		$token_file = dirname( $file ) . '/.kiro/github-token.txt';
+		if ( file_exists( $token_file ) ) {
+			$this->github_token = trim( file_get_contents( $token_file ) );
+		}
+		
 		$this->init();
 	}
 
@@ -51,65 +58,61 @@ class WAFM_GitHub_Updater {
 			return;
 		}
 
-		// Hook into WordPress update system using the proper filter
-		add_filter( 'update_plugins_github.com', array( $this, 'check_for_update' ), 10, 3 );
+		// Hook into WordPress update system
+		add_filter( 'pre_set_site_transient_update_plugins', array( $this, 'check_for_update' ) );
 		
 		// Plugin information for the modal
-		add_filter( 'plugins_api', array( $this, 'plugin_information' ), 10, 3 );
+		add_filter( 'plugins_api', array( $this, 'plugin_information' ), 20, 3 );
 		
 		// Fix directory name after update
-		add_filter( 'upgrader_install_package_result', array( $this, 'fix_plugin_directory' ), 10, 2 );
+		add_filter( 'upgrader_source_selection', array( $this, 'fix_plugin_directory' ), 10, 4 );
 		
-		// Update plugin details URL
-		add_filter( 'admin_url', array( $this, 'update_plugin_details_url' ), 10, 2 );
+		// Clear cache after update
+		add_action( 'upgrader_process_complete', array( $this, 'clear_cache' ), 10, 2 );
 	}
 
 	/**
-	 * Check for updates using the proper WordPress filter
+	 * Check for updates
 	 */
-	public function check_for_update( $update, $plugin_data, $plugin_file ) {
-		// Only process our plugin
-		if ( $plugin_file !== $this->plugin_basename ) {
-			return $update;
+	public function check_for_update( $transient ) {
+		if ( empty( $transient->checked ) ) {
+			return $transient;
 		}
 
 		// Get latest release from GitHub
 		$release = $this->get_latest_release();
 		
 		if ( ! $release ) {
-			return false;
+			return $transient;
 		}
 
 		$current_version = $this->plugin_data['Version'] ?? '0';
 		$latest_version = ltrim( $release['tag_name'], 'v' );
 
-		// Only return update if newer version available
-		if ( version_compare( $latest_version, $current_version, '<=' ) ) {
-			return false;
+		// Only add update if newer version available
+		if ( version_compare( $latest_version, $current_version, '>' ) ) {
+			$plugin_data = array(
+				'slug'          => $this->plugin_slug,
+				'plugin'        => $this->plugin_basename,
+				'new_version'   => $latest_version,
+				'url'           => $this->github_url,
+				'package'       => $release['zipball_url'],
+				'tested'        => '6.7',
+				'requires'      => '6.0',
+				'requires_php'  => '7.4',
+			);
+
+			$transient->response[ $this->plugin_basename ] = (object) $plugin_data;
 		}
 
-		// Return update information
-		return array(
-			'id'            => $this->github_url,
-			'slug'          => $this->plugin_slug,
-			'plugin'        => $this->plugin_basename,
-			'version'       => $latest_version,
-			'new_version'   => $latest_version,
-			'url'           => $release['html_url'],
-			'package'       => $release['zipball_url'],
-			'tested'        => '6.7',
-			'requires'      => '6.0',
-			'requires_php'  => '7.4',
-			'icons'         => array(),
-			'banners'       => array(),
-		);
+		return $transient;
 	}
 
 	/**
 	 * Get latest release from GitHub API
 	 */
 	private function get_latest_release() {
-		$transient_key = 'wafm_github_release_v2';
+		$transient_key = 'wafm_github_release_' . md5( $this->github_user . $this->github_repo );
 		$cached = get_transient( $transient_key );
 
 		if ( $cached !== false ) {
@@ -118,13 +121,29 @@ class WAFM_GitHub_Updater {
 
 		$api_url = "https://api.github.com/repos/{$this->github_user}/{$this->github_repo}/releases/latest";
 		
-		$response = wp_remote_get( $api_url, array(
+		$args = array(
 			'headers' => array(
 				'Accept' => 'application/vnd.github.v3+json',
 			),
-		) );
+			'timeout' => 15,
+		);
+		
+		// Add authorization if token is available
+		if ( $this->github_token ) {
+			$args['headers']['Authorization'] = 'token ' . $this->github_token;
+		}
+		
+		$response = wp_remote_get( $api_url, $args );
 
 		if ( is_wp_error( $response ) ) {
+			// Cache failure for 5 minutes to avoid hammering API
+			set_transient( $transient_key, false, 5 * MINUTE_IN_SECONDS );
+			return false;
+		}
+
+		$code = wp_remote_retrieve_response_code( $response );
+		if ( $code !== 200 ) {
+			set_transient( $transient_key, false, 5 * MINUTE_IN_SECONDS );
 			return false;
 		}
 
@@ -132,10 +151,11 @@ class WAFM_GitHub_Updater {
 		$release = json_decode( $body, true );
 
 		if ( ! isset( $release['tag_name'] ) ) {
+			set_transient( $transient_key, false, 5 * MINUTE_IN_SECONDS );
 			return false;
 		}
 
-		// Cache for 6 hours (use 5 minutes for testing: 5 * MINUTE_IN_SECONDS)
+		// Cache for 6 hours
 		set_transient( $transient_key, $release, 6 * HOUR_IN_SECONDS );
 
 		return $release;
@@ -161,22 +181,25 @@ class WAFM_GitHub_Updater {
 
 		$latest_version = ltrim( $release['tag_name'], 'v' );
 
-		return (object) array(
-			'name'          => $this->plugin_data['Name'],
-			'slug'          => $this->plugin_slug,
-			'version'       => $latest_version,
-			'author'        => $this->plugin_data['Author'],
-			'homepage'      => $this->github_url,
-			'download_link' => $release['zipball_url'],
-			'requires'      => '6.0',
-			'requires_php'  => '7.4',
-			'tested'        => '6.7',
-			'last_updated'  => $release['published_at'],
-			'sections'      => array(
-				'description' => $this->plugin_data['Description'],
-				'changelog'   => $this->format_changelog( $release['body'] ?? '' ),
-			),
+		$plugin_info = new stdClass();
+		$plugin_info->name = $this->plugin_data['Name'];
+		$plugin_info->slug = $this->plugin_slug;
+		$plugin_info->version = $latest_version;
+		$plugin_info->author = $this->plugin_data['Author'];
+		$plugin_info->homepage = $this->github_url;
+		$plugin_info->download_link = $release['zipball_url'];
+		$plugin_info->requires = '6.0';
+		$plugin_info->requires_php = '7.4';
+		$plugin_info->tested = '6.7';
+		$plugin_info->last_updated = $release['published_at'];
+		$plugin_info->sections = array(
+			'description' => $this->plugin_data['Description'],
+			'changelog'   => $this->format_changelog( $release['body'] ?? '' ),
 		);
+		$plugin_info->banners = array();
+		$plugin_info->icons = array();
+
+		return $plugin_info;
 	}
 
 	/**
@@ -187,59 +210,81 @@ class WAFM_GitHub_Updater {
 			return '<p>No changelog available.</p>';
 		}
 
-		// Convert markdown to HTML (basic)
-		$body = wp_kses_post( wpautop( $body ) );
+		// Convert markdown headers
+		$body = preg_replace( '/^### (.+)$/m', '<h4>$1</h4>', $body );
+		$body = preg_replace( '/^## (.+)$/m', '<h3>$1</h3>', $body );
+		$body = preg_replace( '/^# (.+)$/m', '<h2>$1</h2>', $body );
 		
-		return $body;
+		// Convert markdown lists
+		$body = preg_replace( '/^\- (.+)$/m', '<li>$1</li>', $body );
+		$body = preg_replace( '/(<li>.*<\/li>)/s', '<ul>$1</ul>', $body );
+		
+		// Convert bold
+		$body = preg_replace( '/\*\*(.+?)\*\*/s', '<strong>$1</strong>', $body );
+		
+		// Convert line breaks
+		$body = wpautop( $body );
+		
+		return wp_kses_post( $body );
 	}
 
 	/**
 	 * Fix plugin directory name after update
 	 * GitHub zipballs extract to {user}-{repo}-{commit} format
 	 */
-	public function fix_plugin_directory( $result, $hook_extra ) {
+	public function fix_plugin_directory( $source, $remote_source, $upgrader, $hook_extra = null ) {
 		global $wp_filesystem;
 
 		// Only process our plugin
 		if ( ! isset( $hook_extra['plugin'] ) || $hook_extra['plugin'] !== $this->plugin_basename ) {
-			return $result;
+			return $source;
 		}
 
-		$plugin_dir = WP_PLUGIN_DIR . '/' . $this->plugin_slug;
-		$new_plugin_dir = $result['destination'];
-
+		// Expected directory name
+		$correct_dir = $this->plugin_slug;
+		
+		// Get the actual directory name from source
+		$source_files = $wp_filesystem->dirlist( $remote_source );
+		if ( ! $source_files ) {
+			return $source;
+		}
+		
+		// GitHub creates directory like: username-reponame-commit
+		$source_dir = key( $source_files );
+		
 		// If already correct, return
-		if ( $new_plugin_dir === $plugin_dir ) {
-			return $result;
+		if ( $source_dir === $correct_dir ) {
+			return $source;
 		}
 
-		// Move to correct directory
-		if ( $wp_filesystem->move( $new_plugin_dir, $plugin_dir, true ) ) {
-			$result['destination'] = $plugin_dir;
-			$result['destination_name'] = $this->plugin_slug;
+		// Rename to correct directory
+		$new_source = trailingslashit( $remote_source ) . $correct_dir;
+		
+		if ( $wp_filesystem->move( $source, $new_source ) ) {
+			return $new_source;
 		}
 
-		return $result;
+		return new WP_Error( 'rename_failed', __( 'Could not rename plugin directory.', 'woocommerce-address-field-manager' ) );
 	}
 
 	/**
-	 * Update plugin details URL to point to GitHub
+	 * Clear cache after update
 	 */
-	public function update_plugin_details_url( $url, $path ) {
-		if ( strpos( $path, 'plugin-install.php' ) === false ) {
-			return $url;
+	public function clear_cache( $upgrader, $options ) {
+		if ( $options['action'] !== 'update' || $options['type'] !== 'plugin' ) {
+			return;
 		}
 
-		if ( strpos( $url, 'plugin=' . $this->plugin_slug ) === false ) {
-			return $url;
+		if ( ! isset( $options['plugins'] ) ) {
+			return;
 		}
 
-		// Redirect to GitHub releases page
-		return $this->github_url . '/releases';
+		foreach ( $options['plugins'] as $plugin ) {
+			if ( $plugin === $this->plugin_basename ) {
+				$transient_key = 'wafm_github_release_' . md5( $this->github_user . $this->github_repo );
+				delete_transient( $transient_key );
+				break;
+			}
+		}
 	}
-}
-
-// Initialize updater - runs even when plugin is inactive
-if ( file_exists( WP_PLUGIN_DIR . '/woocommerce-address-field-manager/woocommerce-address-field-manager.php' ) ) {
-	new WAFM_GitHub_Updater( WP_PLUGIN_DIR . '/woocommerce-address-field-manager/woocommerce-address-field-manager.php' );
 }

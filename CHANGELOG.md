@@ -2,6 +2,40 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.14] - 2026-04-26
+
+### 🔧 Fixed GitHub Auto-Updater
+
+**Proper WordPress Update System Integration**
+- **Fixed**: Updater now uses correct WordPress hooks (`pre_set_site_transient_update_plugins`)
+- **Fixed**: Directory renaming after update (GitHub zipballs extract to `user-repo-commit` format)
+- **Fixed**: Plugin information modal now displays properly
+- **Fixed**: Transient caching with proper error handling
+- **Added**: Support for GitHub token (optional, for private repos or higher rate limits)
+- **Added**: Proper cache clearing after updates
+- **Improved**: Better markdown to HTML conversion for changelogs
+- **Improved**: Error handling for API failures
+
+### 🎯 How It Works Now
+1. Checks GitHub API every 6 hours for new releases
+2. Compares version numbers and shows update notification
+3. Downloads zipball from GitHub when updating
+4. Automatically renames extracted directory to correct plugin folder name
+5. Clears cache after successful update
+
+### 📝 Technical Details
+- Uses `pre_set_site_transient_update_plugins` filter (WordPress standard)
+- Uses `upgrader_source_selection` filter for directory renaming
+- Uses `plugins_api` filter for plugin information modal
+- Caches API responses for 6 hours (failures cached for 5 minutes)
+- Optional GitHub token support from `.kiro/github-token.txt`
+
+### 📝 Files Modified
+- `includes/class-github-updater.php` - Complete rewrite with proper WordPress hooks
+- `woocommerce-address-field-manager.php` - Proper updater initialization
+
+---
+
 ## [1.0.13] - 2026-04-26
 
 ### ✅ Confirmed Fix - No More Duplicate Fields
