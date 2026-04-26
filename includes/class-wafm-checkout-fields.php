@@ -86,9 +86,6 @@ class WAFM_Checkout_Fields {
 		// Clear session when user updates profile
 		add_action( 'personal_options_update', array( __CLASS__, 'clear_thana_session' ) );
 		add_action( 'edit_user_profile_update', array( __CLASS__, 'clear_thana_session' ) );
-
-		// Display thana as custom field in thank you page and emails
-		add_filter( 'woocommerce_order_details_after_order_table', array( __CLASS__, 'display_thana_custom_field' ) );
 	}
 
 	/**
@@ -722,13 +719,12 @@ class WAFM_Checkout_Fields {
 		$billing_settings = WAFM_Settings::get_billing_settings();
 		$shipping_settings = WAFM_Settings::get_shipping_settings();
 
-		// Customize Bangladesh address format to show state name instead of code
-		// and add thana placeholder
-		if ( $billing_settings['enabled'] || $shipping_settings['enabled'] ) {
-			// Set custom BD format with state name (not code) and thana
-			// Default WooCommerce format: "{name}\n{company}\n{address_1}\n{address_2}\n{city}\n{state}\n{postcode}"
-			// We want: state name, then thana, then postcode
-			$formats['BD'] = "{name}\n{company}\n{address_1}\n{address_2}\n{city}\n{state_upper}\n{thana}\n{postcode}";
+		// Add thana placeholder to Bangladesh address format
+		// Use simple {thana} placeholder (without billing_/shipping_ prefix)
+		// WooCommerce uses the same format for both billing and shipping
+		if ( isset( $formats['BD'] ) && ( $billing_settings['enabled'] || $shipping_settings['enabled'] ) ) {
+			// Add {thana} placeholder after {state}
+			$formats['BD'] = str_replace( '{state}', '{state}\n{thana}', $formats['BD'] );
 		}
 
 		return $formats;
@@ -786,85 +782,18 @@ class WAFM_Checkout_Fields {
 		$thana_name = self::get_thana_name_from_code( $thana_code );
 		$display_value = $thana_name ? $thana_name : $thana_code;
 		
-		// Get the state code and convert to state name
+		// Get the state code to find where to insert thana (thana goes before state)
 		$state_code = $is_billing ? $order->get_billing_state() : $order->get_shipping_state();
 		
 		if ( $state_code ) {
-			// Get state name from code
-			$states = WC()->countries->get_states( 'BD' );
-			$state_name = isset( $states[ $state_code ] ) ? strtoupper( $states[ $state_code ] ) : $state_code;
-			
-			// Add thana before state name line
-			// The state appears as "SATKHIRA" (uppercase) in the formatted address when using {state_upper}
-			$formatted_address = str_replace( '<br/>' . $state_name, '<br/>' . $display_value . '<br/>' . $state_name, $formatted_address );
+			// Add thana before state code line
+			// The state code appears as "BD-58" in the formatted address
+			$formatted_address = str_replace( '<br/>' . $state_code, '<br/>' . $display_value . '<br/>' . $state_code, $formatted_address );
 		}
 		
 		return $formatted_address;
 	}
 
-	/**
-	 * Display thana as custom field in thank you page and emails
-	 */
-	public static function display_thana_custom_field( $order ) {
-		// Ensure we have a valid order object
-		if ( ! is_a( $order, 'WC_Order' ) ) {
-			return;
-		}
-
-		// Get settings
-		$billing_settings = WAFM_Settings::get_billing_settings();
-		$shipping_settings = WAFM_Settings::get_shipping_settings();
-
-		// Collect thana fields to display
-		$thana_fields = array();
-
-		// Check billing thana - simple and direct like the old version
-		if ( $billing_settings['enabled'] ) {
-			$meta_key = '_' . $billing_settings['field_name'];
-			$thana_code = $order->get_meta( $meta_key );
-			if ( $thana_code ) {
-				$thana_name = self::get_thana_name_from_code( $thana_code );
-				$display_value = $thana_name ? $thana_name : $thana_code;
-				$thana_fields[ $billing_settings['field_name'] ] = array(
-					'label' => $billing_settings['show_label'] ? $billing_settings['label'] : __( 'Billing Thana', 'woocommerce-address-field-manager' ),
-					'value' => $display_value,
-				);
-			}
-		}
-
-		// Check shipping thana - simple and direct like the old version
-		if ( $shipping_settings['enabled'] ) {
-			$meta_key = '_' . $shipping_settings['field_name'];
-			$thana_code = $order->get_meta( $meta_key );
-			if ( $thana_code ) {
-				$thana_name = self::get_thana_name_from_code( $thana_code );
-				$display_value = $thana_name ? $thana_name : $thana_code;
-				$thana_fields[ $shipping_settings['field_name'] ] = array(
-					'label' => $shipping_settings['show_label'] ? $shipping_settings['label'] : __( 'Shipping Thana', 'woocommerce-address-field-manager' ),
-					'value' => $display_value,
-				);
-			}
-		}
-
-		// Display thana fields if any exist
-		if ( ! empty( $thana_fields ) ) {
-			?>
-			<table class="woocommerce-table woocommerce-table--custom-fields shop_table custom-fields">
-				<tbody>
-					<tr>
-						<th colspan="2" class="thwcfe-section-title"><?php esc_html_e( 'Thana Details', 'woocommerce-address-field-manager' ); ?></th>
-					</tr>
-					<?php foreach ( $thana_fields as $field_key => $field_data ) : ?>
-					<tr>
-						<td><?php echo esc_html( $field_data['label'] ); ?>:</td>
-						<td><?php echo esc_html( $field_data['value'] ); ?></td>
-					</tr>
-					<?php endforeach; ?>
-				</tbody>
-			</table>
-			<?php
-		}
-	}
 
 	/**
 	 * Get thana data from JSON file

@@ -2,6 +2,30 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.25] - 2026-04-26
+
+### 🗑️ Removed Duplicate Thana Display
+
+**Cleanup**: Removed the separate "Thana Details" table
+
+**Reason**:
+- Thana is now displayed inside the actual billing and shipping address blocks
+- The separate table was redundant and cluttering the thank you page
+- Cleaner, more professional appearance
+
+**What was removed**:
+- `display_thana_custom_field()` method
+- "Thana Details" table that appeared after order details
+- Hook: `woocommerce_order_details_after_order_table`
+
+**Result**: Thana now only appears once, inside the formatted address blocks where it belongs.
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Removed display_thana_custom_field method and hook
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.25
+
+---
+
 ## [1.0.24] - 2026-04-26
 
 ### 🎨 Improved Address Display Format
@@ -12,26 +36,6 @@ All notable changes to WooCommerce Address Field Manager will be documented in t
 - State now shows as "SATKHIRA" instead of "BD-58"
 - Updated Bangladesh address format to use `{state_upper}` placeholder
 - Thana insertion logic updated to work with state names instead of codes
-
-**Before**:
-```
-Md Imran
-Baliadanga, Hathatgonj, Satkhira Sadar
-Kaliganj
-BD-58
-```
-
-**After**:
-```
-Md Imran
-Baliadanga, Hathatgonj, Satkhira Sadar
-Kaliganj
-SATKHIRA
-```
-
-### 📝 Files Modified
-- `includes/class-wafm-checkout-fields.php` - Updated address format and string replacement logic
-- `woocommerce-address-field-manager.php` - Version bump to 1.0.24
 
 ---
 
