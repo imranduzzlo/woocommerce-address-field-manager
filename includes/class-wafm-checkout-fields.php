@@ -1137,35 +1137,48 @@ class WAFM_Checkout_Fields {
 		jQuery(function($) {
 			// Thana data
 			var thanaData = <?php echo wp_json_encode( $thana_data ); ?>;
+			var billingFieldName = '<?php echo esc_js( $billing_settings['field_name'] ); ?>';
+			var shippingFieldName = '<?php echo esc_js( $shipping_settings['field_name'] ); ?>';
+			var billingPlaceholder = '<?php echo esc_js( $billing_settings['placeholder_input'] ); ?>';
+			var shippingPlaceholder = '<?php echo esc_js( $shipping_settings['placeholder_input'] ); ?>';
 			
 			// Function to update thana field based on country/state
 			function updateThanaField(type) {
+				var fieldName = (type === 'billing') ? billingFieldName : shippingFieldName;
+				var placeholder = (type === 'billing') ? billingPlaceholder : shippingPlaceholder;
 				var countryField = $('#_' + type + '_country');
 				var stateField = $('#_' + type + '_state');
-				var thanaField = $('#_<?php echo esc_js( $type === 'billing' ? $billing_settings['field_name'] : $shipping_settings['field_name'] ); ?>');
+				var thanaField = $('#_' + fieldName);
 				
-				if (!thanaField.length) return;
+				if (!thanaField.length) {
+					console.log('Thana field not found: #_' + fieldName);
+					return;
+				}
 				
 				var country = countryField.val();
 				var state = stateField.val();
 				var currentValue = thanaField.val();
 				
+				console.log(type + ' - Country:', country, 'State:', state, 'Current Value:', currentValue);
+				
 				// Check if state is BD
 				var isBD = state && state.toString().indexOf('BD-') === 0;
 				
 				if (isBD && thanaData[state]) {
+					console.log(type + ' - Converting to select, options:', Object.keys(thanaData[state]).length);
 					// Convert to select if needed
 					if (!thanaField.is('select')) {
-						var selectHtml = '<select id="' + thanaField.attr('id') + '" name="' + thanaField.attr('name') + '" class="wc-enhanced-select" style="width: 100%;"><option value="">Select Thana</option>';
+						var selectHtml = '<select id="_' + fieldName + '" name="_' + fieldName + '" class="wc-enhanced-select" style="width: 100%;"><option value="">Select Thana</option>';
 						$.each(thanaData[state], function(code, name) {
 							var selected = (code === currentValue) ? ' selected' : '';
 							selectHtml += '<option value="' + code + '"' + selected + '>' + name + '</option>';
 						});
 						selectHtml += '</select>';
 						thanaField.replaceWith(selectHtml);
-						$('#_<?php echo esc_js( $type === 'billing' ? $billing_settings['field_name'] : $shipping_settings['field_name'] ); ?>').selectWoo();
+						// Re-select the field after replacing
+						$('#_' + fieldName).selectWoo();
 					} else {
-						// Update options
+						// Update options in existing select
 						thanaField.find('option:not(:first)').remove();
 						$.each(thanaData[state], function(code, name) {
 							thanaField.append('<option value="' + code + '">' + name + '</option>');
@@ -1176,20 +1189,23 @@ class WAFM_Checkout_Fields {
 						thanaField.trigger('change');
 					}
 				} else {
+					console.log(type + ' - Converting to input');
 					// Convert to input if needed
 					if (thanaField.is('select')) {
-						var inputHtml = '<input type="text" id="' + thanaField.attr('id') + '" name="' + thanaField.attr('name') + '" value="' + currentValue + '" style="width: 100%;" placeholder="<?php echo esc_js( $type === 'billing' ? $billing_settings['placeholder_input'] : $shipping_settings['placeholder_input'] ); ?>" />';
+						var inputHtml = '<input type="text" id="_' + fieldName + '" name="_' + fieldName + '" value="' + currentValue + '" style="width: 100%;" placeholder="' + placeholder + '" />';
 						thanaField.replaceWith(inputHtml);
 					}
 				}
 			}
 			
-			// Listen for country/state changes
+			// Listen for country/state changes - use separate handlers
 			$(document).on('change', '#_billing_country, #_billing_state', function() {
+				console.log('Billing country/state changed');
 				updateThanaField('billing');
 			});
 			
 			$(document).on('change', '#_shipping_country, #_shipping_state', function() {
+				console.log('Shipping country/state changed');
 				updateThanaField('shipping');
 			});
 		});
