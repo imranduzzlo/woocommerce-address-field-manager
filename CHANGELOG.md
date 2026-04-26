@@ -2,6 +2,34 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.44] - 2026-04-26
+
+### 🔧 Fixed Duplicate Thana After Edit
+
+**Problem**: 
+v1.0.43 worked perfectly for new orders, but after editing the order, thana appeared twice.
+
+**Solution**:
+Added duplicate check before injecting thana:
+```php
+// Check if thana is already in the formatted address (prevent duplicates)
+if ( strpos( $formatted_address, $display_value ) !== false ) {
+    return $formatted_address; // Already there, don't add again
+}
+```
+
+**Result**: 
+- ✅ Thana shows for new orders
+- ✅ Thana shows for edited orders
+- ✅ No duplicates!
+- ✅ Works everywhere: admin, thank you page, emails
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Added duplicate check
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.44
+
+---
+
 ## [1.0.43] - 2026-04-26
 
 ### ✅ RESTORED v1.0.23 Working Approach

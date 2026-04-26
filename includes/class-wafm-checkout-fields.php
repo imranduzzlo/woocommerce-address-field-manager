@@ -491,6 +491,11 @@ class WAFM_Checkout_Fields {
 		$thana_name = self::get_thana_name_from_code( $thana_code );
 		$display_value = $thana_name ? $thana_name : $thana_code;
 
+		// Check if thana is already in the formatted address (prevent duplicates)
+		if ( strpos( $formatted_address, $display_value ) !== false ) {
+			return $formatted_address; // Already there, don't add again
+		}
+
 		// Get the state to find where to insert thana (thana goes before state)
 		$state = $is_billing ? $order->get_billing_state() : $order->get_shipping_state();
 
