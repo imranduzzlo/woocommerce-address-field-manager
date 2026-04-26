@@ -195,6 +195,15 @@ class WAFM_Settings {
 	 * Render settings page
 	 */
 	public static function render_settings_page() {
+		// Get current tab from URL parameter
+		$current_tab = isset( $_GET['tab'] ) ? sanitize_text_field( $_GET['tab'] ) : 'billing';
+		
+		// Validate tab
+		$valid_tabs = array( 'billing', 'shipping', 'updater' );
+		if ( ! in_array( $current_tab, $valid_tabs, true ) ) {
+			$current_tab = 'billing';
+		}
+		
 		// Get billing settings
 		$billing_enabled = get_option( 'WAFM_billing_enabled', 1 );
 		$billing_field_name = get_option( 'WAFM_billing_field_name', 'billing_thana' );
@@ -221,19 +230,20 @@ class WAFM_Settings {
 			<h1><?php esc_html_e( 'WooCommerce Address Field Manager Settings', 'woocommerce-address-field-manager' ); ?></h1>
 
 			<nav class="nav-tab-wrapper woo-nav-tab-wrapper">
-				<a href="#billing" class="nav-tab nav-tab-active" data-tab="billing">
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=wafm-settings&tab=billing' ) ); ?>" class="nav-tab <?php echo $current_tab === 'billing' ? 'nav-tab-active' : ''; ?>">
 					<?php esc_html_e( 'Billing Address', 'woocommerce-address-field-manager' ); ?>
 				</a>
-				<a href="#shipping" class="nav-tab" data-tab="shipping">
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=wafm-settings&tab=shipping' ) ); ?>" class="nav-tab <?php echo $current_tab === 'shipping' ? 'nav-tab-active' : ''; ?>">
 					<?php esc_html_e( 'Shipping Address', 'woocommerce-address-field-manager' ); ?>
 				</a>
-				<a href="#updater" class="nav-tab" data-tab="updater">
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=wafm-settings&tab=updater' ) ); ?>" class="nav-tab <?php echo $current_tab === 'updater' ? 'nav-tab-active' : ''; ?>">
 					<?php esc_html_e( 'Plugin Updater', 'woocommerce-address-field-manager' ); ?>
 				</a>
 			</nav>
 
 			<!-- Billing Settings Tab -->
-			<div id="billing" class="tab-content active">
+			<?php if ( $current_tab === 'billing' ) : ?>
+			<div id="billing" class="tab-content">
 				<form method="post" action="options.php">
 					<?php settings_fields( 'WAFM_billing_settings' ); ?>
 
@@ -368,8 +378,10 @@ class WAFM_Settings {
 					<?php submit_button(); ?>
 				</form>
 			</div>
+			<?php endif; ?>
 
 			<!-- Shipping Settings Tab -->
+			<?php if ( $current_tab === 'shipping' ) : ?>
 			<div id="shipping" class="tab-content">
 				<form method="post" action="options.php">
 					<?php settings_fields( 'WAFM_shipping_settings' ); ?>
@@ -505,8 +517,10 @@ class WAFM_Settings {
 					<?php submit_button(); ?>
 				</form>
 			</div>
+			<?php endif; ?>
 
 			<!-- Plugin Updater Tab -->
+			<?php if ( $current_tab === 'updater' ) : ?>
 			<div id="updater" class="tab-content">
 				<h2><?php esc_html_e( 'Plugin Update Cache', 'woocommerce-address-field-manager' ); ?></h2>
 				<p><?php esc_html_e( 'Use this tool to refresh the WordPress plugin update cache. This will force WordPress to check for new plugin updates immediately.', 'woocommerce-address-field-manager' ); ?></p>
@@ -579,6 +593,7 @@ class WAFM_Settings {
 					</ul>
 				</div>
 			</div>
+			<?php endif; ?>
 		</div>
 		<?php
 	}
@@ -630,8 +645,9 @@ class WAFM_Settings {
 		// Redirect with success message and preserve tab
 		wp_safe_redirect( add_query_arg( array(
 			'page' => 'wafm-settings',
+			'tab' => 'updater',
 			'cache_refreshed' => '1',
-		), admin_url( 'admin.php' ) ) . '#updater' );
+		), admin_url( 'admin.php' ) ) );
 		exit;
 	}
 }

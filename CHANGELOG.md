@@ -2,6 +2,38 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.17] - 2026-04-26
+
+### 🔧 Fixed Settings Page Tabs - WordPress Standard URL Parameters
+
+**Problem**: Settings page tabs used hash-based navigation, didn't persist on reload properly
+
+**Solution - WordPress Standard Approach**:
+- Changed from hash-based tabs (`#billing`) to URL parameter tabs (`?tab=billing`)
+- Follows WordPress standard pattern (like WooCommerce settings)
+- Tab state persists in URL, works with browser back/forward buttons
+- No JavaScript needed for tab switching - handled by PHP
+
+### 📝 What Changed
+- ✅ Tab links now use proper URLs: `admin.php?page=wafm-settings&tab=billing`
+- ✅ Active tab determined by `$_GET['tab']` parameter
+- ✅ Each tab content conditionally rendered based on current tab
+- ✅ Simplified JavaScript - removed hash/localStorage logic
+- ✅ Cache refresh redirect preserves tab parameter
+
+### 🎯 Benefits
+- Tab persists on page reload (URL-based)
+- Works with browser back/forward buttons
+- Follows WordPress/WooCommerce conventions
+- Cleaner, more maintainable code
+- No localStorage dependency
+
+### 📝 Files Modified
+- `includes/class-wafm-settings.php` - URL-based tab rendering
+- `assets/js/admin-settings.js` - Removed unnecessary JavaScript
+
+---
+
 ## [1.0.16] - 2026-04-26
 
 ### 🔧 Simplified Cache Approach - Back to Basics
