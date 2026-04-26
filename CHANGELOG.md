@@ -2,6 +2,40 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.37] - 2026-04-26
+
+### 🔧 Fixed State Formatting in Formatted Address Array
+
+**Problem with v1.0.36**: 
+The `format_state_for_display()` filter wasn't being triggered in all contexts because WooCommerce doesn't always call `$order->get_billing_state()` - sometimes it reads directly from the formatted address array.
+
+**Solution**:
+Added state formatting directly in the `add_thana_to_formatted_address()` method, which is called when building the formatted address array for display.
+
+**What Changed**:
+- Added state code-to-name conversion in `add_thana_to_formatted_address()` method
+- Improved `format_state_for_display()` context detection with backtrace checking
+- Added `is_getting_field_value()` helper method for precise context detection
+
+**How It Works Now**:
+1. **Formatted address array:** State converted from "BD-58" → "SATKHIRA"
+2. **Dropdown field:** Backtrace detection returns code for form population
+3. **Display everywhere:** Shows formatted state name
+
+**Result**: 
+- ✅ State shows formatted in admin order view
+- ✅ State shows formatted in thank you page
+- ✅ State shows formatted in emails
+- ✅ State dropdown still works (gets code when needed)
+- ✅ Thana shows correctly everywhere
+- ✅ Works for new and edited orders
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Added state formatting to address array
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.37
+
+---
+
 ## [1.0.36] - 2026-04-26
 
 ### 🎯 The Perfect Solution - Option 4: Smart State Formatting

@@ -242,8 +242,8 @@ class WAFM_Checkout_Fields {
 	 * Format state for display based on context (Option 4)
 	 * 
 	 * This intercepts when WooCommerce reads the state and returns:
-	 * - CODE (BD-58) for admin edit forms (dropdown needs code)
-	 * - NAME (SATKHIRA) for display (thank you page, emails, admin view)
+	 * - CODE (BD-58) for admin edit forms when populating dropdown field
+	 * - NAME (SATKHIRA) for all display contexts
 	 * 
 	 * @param string $state The state code from database
 	 * @param WC_Order $order The order object
@@ -255,24 +255,43 @@ class WAFM_Checkout_Fields {
 			return $state;
 		}
 
-		// Detect context: Are we in admin edit form?
-		$is_admin_edit = is_admin() && (
-			// Traditional post edit
-			( isset( $_GET['post'] ) && isset( $_GET['action'] ) && $_GET['action'] === 'edit' ) ||
-			// HPOS edit
-			( isset( $_GET['page'] ) && $_GET['page'] === 'wc-orders' && isset( $_GET['action'] ) && $_GET['action'] === 'edit' ) ||
-			// AJAX save from admin
-			( defined( 'DOING_AJAX' ) && DOING_AJAX && isset( $_POST['action'] ) && $_POST['action'] === 'woocommerce_save_order_items' )
+		// Check if we're populating the state dropdown field in admin edit
+		// We need to return CODE only when the dropdown is being populated
+		$is_populating_dropdown = is_admin() && (
+			// Check if we're on the edit page AND the backtrace shows we're getting value for the field
+			( isset( $_GET['action'] ) && $_GET['action'] === 'edit' && self::is_getting_field_value() )
 		);
 
-		// If we're in admin edit form, return CODE (for dropdown to work)
-		if ( $is_admin_edit ) {
+		// If we're populating dropdown, return CODE
+		if ( $is_populating_dropdown ) {
 			return $state; // Return code as-is
 		}
 
-		// For all display contexts (thank you page, emails, admin view), return formatted NAME
+		// For all other contexts (display, emails, thank you page), return formatted NAME
 		$states = WC()->countries->get_states( 'BD' );
 		return isset( $states[ $state ] ) ? $states[ $state ] : $state;
+	}
+
+	/**
+	 * Check if we're getting field value for form population
+	 * 
+	 * @return bool
+	 */
+	private static function is_getting_field_value() {
+		// Check backtrace to see if we're being called from field value getter
+		$backtrace = debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 10 );
+		foreach ( $backtrace as $trace ) {
+			// Check if we're in meta box rendering or field population
+			if ( isset( $trace['function'] ) && in_array( $trace['function'], array(
+				'add_thana_meta_boxes',
+				'render_thana_meta_box',
+				'get_value',
+				'get_field_value'
+			), true ) ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -397,6 +416,14 @@ class WAFM_Checkout_Fields {
 		// Ensure address is an array
 		if ( ! is_array( $address ) ) {
 			return $address;
+		}
+
+		// Format state code to name for display
+		if ( isset( $address['state'] ) && ! empty( $address['state'] ) && strpos( $address['state'], 'BD-' ) === 0 ) {
+			$states = WC()->countries->get_states( 'BD' );
+			if ( isset( $states[ $address['state'] ] ) ) {
+				$address['state'] = $states[ $address['state'] ];
+			}
 		}
 
 		// Get thana code from order meta - simple and direct like the old version
