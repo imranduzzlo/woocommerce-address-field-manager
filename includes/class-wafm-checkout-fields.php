@@ -25,9 +25,9 @@ class WAFM_Checkout_Fields {
 		add_action( 'woocommerce_checkout_process', array( __CLASS__, 'validate_thana_fields' ) );
 		add_action( 'woocommerce_checkout_update_order_meta', array( __CLASS__, 'save_thana_fields' ) );
 
-		// Make thana editable in admin order page
-		add_filter( 'woocommerce_admin_billing_fields', array( __CLASS__, 'add_editable_billing_thana_to_order_admin' ) );
-		add_filter( 'woocommerce_admin_shipping_fields', array( __CLASS__, 'add_editable_shipping_thana_to_order_admin' ) );
+		// Make thana editable in admin order page - DISABLED (using meta box instead)
+		// add_filter( 'woocommerce_admin_billing_fields', array( __CLASS__, 'add_editable_billing_thana_to_order_admin' ) );
+		// add_filter( 'woocommerce_admin_shipping_fields', array( __CLASS__, 'add_editable_shipping_thana_to_order_admin' ) );
 		
 		// HPOS compatibility - Add custom meta boxes for thana fields
 		add_action( 'add_meta_boxes', array( __CLASS__, 'add_thana_meta_boxes' ), 30 );
@@ -955,10 +955,15 @@ class WAFM_Checkout_Fields {
 		$billing_settings = WAFM_Settings::get_billing_settings();
 		$shipping_settings = WAFM_Settings::get_shipping_settings();
 
-		// Save billing thana
+		// Save billing thana - BOTH patterns
 		if ( $billing_settings['enabled'] && isset( $_POST[ '_' . $billing_settings['field_name'] ] ) ) {
 			$billing_thana = sanitize_text_field( wp_unslash( $_POST[ '_' . $billing_settings['field_name'] ] ) );
+			
+			// Save with underscore prefix
 			update_post_meta( $post_id, '_' . $billing_settings['field_name'], $billing_thana );
+			
+			// Also save without underscore
+			update_post_meta( $post_id, $billing_settings['field_name'], $billing_thana );
 			
 			// Clear cache for this order
 			wp_cache_delete( $post_id, 'post_meta' );
@@ -966,10 +971,15 @@ class WAFM_Checkout_Fields {
 			clean_post_cache( $post_id );
 		}
 
-		// Save shipping thana
+		// Save shipping thana - BOTH patterns
 		if ( $shipping_settings['enabled'] && isset( $_POST[ '_' . $shipping_settings['field_name'] ] ) ) {
 			$shipping_thana = sanitize_text_field( wp_unslash( $_POST[ '_' . $shipping_settings['field_name'] ] ) );
+			
+			// Save with underscore prefix
 			update_post_meta( $post_id, '_' . $shipping_settings['field_name'], $shipping_thana );
+			
+			// Also save without underscore
+			update_post_meta( $post_id, $shipping_settings['field_name'], $shipping_thana );
 			
 			// Clear cache for this order
 			wp_cache_delete( $post_id, 'post_meta' );
@@ -1039,17 +1049,33 @@ class WAFM_Checkout_Fields {
 		// Get thana data
 		$thana_data = self::get_thana_data();
 
-		// Get current values
+		// Get current values - try both with and without underscore
 		$billing_country = $order->get_billing_country();
 		$billing_state = $order->get_billing_state();
 		$billing_thana = $order->get_meta( '_' . $billing_settings['field_name'], true );
+		if ( ! $billing_thana ) {
+			$billing_thana = $order->get_meta( $billing_settings['field_name'], true );
+		}
 		
 		$shipping_country = $order->get_shipping_country();
 		$shipping_state = $order->get_shipping_state();
 		$shipping_thana = $order->get_meta( '_' . $shipping_settings['field_name'], true );
+		if ( ! $shipping_thana ) {
+			$shipping_thana = $order->get_meta( $shipping_settings['field_name'], true );
+		}
 
 		wp_nonce_field( 'wafm_save_thana_meta_box', 'wafm_thana_nonce' );
+		
+		// Debug output
 		?>
+		<!-- Debug Info:
+		Billing Country: <?php echo esc_html( $billing_country ); ?>
+		Billing State: <?php echo esc_html( $billing_state ); ?>
+		Billing Thana: <?php echo esc_html( $billing_thana ); ?>
+		Shipping Country: <?php echo esc_html( $shipping_country ); ?>
+		Shipping State: <?php echo esc_html( $shipping_state ); ?>
+		Shipping Thana: <?php echo esc_html( $shipping_thana ); ?>
+		-->
 		<div class="wafm-thana-meta-box">
 			<?php if ( $billing_settings['enabled'] ) : ?>
 				<p class="form-field form-field-wide">
@@ -1069,7 +1095,11 @@ class WAFM_Checkout_Fields {
 							<?php endforeach; ?>
 						</select>
 					<?php else : ?>
-						<input type="text" id="_<?php echo esc_attr( $billing_settings['field_name'] ); ?>" name="_<?php echo esc_attr( $billing_settings['field_name'] ); ?>" value="<?php echo esc_attr( $billing_thana ); ?>" style="width: 100%;" />
+						<input type="text" id="_<?php echo esc_attr( $billing_settings['field_name'] ); ?>" name="_<?php echo esc_attr( $billing_settings['field_name'] ); ?>" value="<?php echo esc_attr( $billing_thana ); ?>" style="width: 100%;" placeholder="<?php echo esc_attr( $billing_settings['placeholder_input'] ); ?>" />
+						<small style="display: block; margin-top: 5px; color: #666;">
+							Country: <?php echo esc_html( $billing_country ?: 'Not set' ); ?>, 
+							State: <?php echo esc_html( $billing_state ?: 'Not set' ); ?>
+						</small>
 					<?php endif; ?>
 				</p>
 			<?php endif; ?>
@@ -1092,7 +1122,11 @@ class WAFM_Checkout_Fields {
 							<?php endforeach; ?>
 						</select>
 					<?php else : ?>
-						<input type="text" id="_<?php echo esc_attr( $shipping_settings['field_name'] ); ?>" name="_<?php echo esc_attr( $shipping_settings['field_name'] ); ?>" value="<?php echo esc_attr( $shipping_thana ); ?>" style="width: 100%;" />
+						<input type="text" id="_<?php echo esc_attr( $shipping_settings['field_name'] ); ?>" name="_<?php echo esc_attr( $shipping_settings['field_name'] ); ?>" value="<?php echo esc_attr( $shipping_thana ); ?>" style="width: 100%;" placeholder="<?php echo esc_attr( $shipping_settings['placeholder_input'] ); ?>" />
+						<small style="display: block; margin-top: 5px; color: #666;">
+							Country: <?php echo esc_html( $shipping_country ?: 'Not set' ); ?>, 
+							State: <?php echo esc_html( $shipping_state ?: 'Not set' ); ?>
+						</small>
 					<?php endif; ?>
 				</p>
 			<?php endif; ?>
@@ -1117,18 +1151,32 @@ class WAFM_Checkout_Fields {
 		$billing_settings = WAFM_Settings::get_billing_settings();
 		$shipping_settings = WAFM_Settings::get_shipping_settings();
 
-		// Save billing thana
+		// Save billing thana - BOTH patterns (with and without underscore)
 		if ( $billing_settings['enabled'] && isset( $_POST[ '_' . $billing_settings['field_name'] ] ) ) {
 			$billing_thana = sanitize_text_field( wp_unslash( $_POST[ '_' . $billing_settings['field_name'] ] ) );
+			
+			// Save with underscore prefix (standard WooCommerce pattern)
 			$order->update_meta_data( '_' . $billing_settings['field_name'], $billing_thana );
+			
+			// Also save without underscore for compatibility
+			$order->update_meta_data( $billing_settings['field_name'], $billing_thana );
 		}
 
-		// Save shipping thana
+		// Save shipping thana - BOTH patterns (with and without underscore)
 		if ( $shipping_settings['enabled'] && isset( $_POST[ '_' . $shipping_settings['field_name'] ] ) ) {
 			$shipping_thana = sanitize_text_field( wp_unslash( $_POST[ '_' . $shipping_settings['field_name'] ] ) );
+			
+			// Save with underscore prefix (standard WooCommerce pattern)
 			$order->update_meta_data( '_' . $shipping_settings['field_name'], $shipping_thana );
+			
+			// Also save without underscore for compatibility
+			$order->update_meta_data( $shipping_settings['field_name'], $shipping_thana );
 		}
 
 		$order->save();
+		
+		// Clear caches
+		wp_cache_delete( $order_id, 'post_meta' );
+		wp_cache_delete( 'wc_order_' . $order_id, 'orders' );
 	}
 }
