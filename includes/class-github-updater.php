@@ -235,8 +235,17 @@ class WAFM_GitHub_Updater {
 	public function fix_plugin_directory( $source, $remote_source, $upgrader, $hook_extra = null ) {
 		global $wp_filesystem;
 
-		// Only process our plugin
-		if ( ! isset( $hook_extra['plugin'] ) || $hook_extra['plugin'] !== $this->plugin_basename ) {
+		// Check if this is our plugin being updated
+		$is_our_plugin = false;
+		
+		if ( isset( $hook_extra['plugin'] ) && $hook_extra['plugin'] === $this->plugin_basename ) {
+			$is_our_plugin = true;
+		} elseif ( isset( $hook_extra['plugins'] ) && is_array( $hook_extra['plugins'] ) ) {
+			// Bulk update
+			$is_our_plugin = in_array( $this->plugin_basename, $hook_extra['plugins'], true );
+		}
+		
+		if ( ! $is_our_plugin ) {
 			return $source;
 		}
 
@@ -244,13 +253,8 @@ class WAFM_GitHub_Updater {
 		$correct_dir = $this->plugin_slug;
 		
 		// Get the actual directory name from source
-		$source_files = $wp_filesystem->dirlist( $remote_source );
-		if ( ! $source_files ) {
-			return $source;
-		}
-		
-		// GitHub creates directory like: username-reponame-commit
-		$source_dir = key( $source_files );
+		$path_parts = explode( '/', untrailingslashit( $source ) );
+		$source_dir = array_pop( $path_parts );
 		
 		// If already correct, return
 		if ( $source_dir === $correct_dir ) {
@@ -258,7 +262,12 @@ class WAFM_GitHub_Updater {
 		}
 
 		// Rename to correct directory
-		$new_source = trailingslashit( $remote_source ) . $correct_dir;
+		$new_source = trailingslashit( dirname( $source ) ) . $correct_dir;
+		
+		// Remove destination if it exists
+		if ( $wp_filesystem->exists( $new_source ) ) {
+			$wp_filesystem->delete( $new_source, true );
+		}
 		
 		if ( $wp_filesystem->move( $source, $new_source ) ) {
 			return $new_source;

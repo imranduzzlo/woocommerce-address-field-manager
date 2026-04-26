@@ -2,6 +2,31 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.27] - 2026-04-26
+
+### 🔧 Fixed GitHub Auto-Updater
+
+**Problem**: Update was failing with "The package could not be installed" error
+
+**Root Cause**:
+- The `fix_plugin_directory` method wasn't detecting the plugin correctly in all update scenarios
+- Only checked for single plugin updates, not bulk updates
+- Directory detection logic was flawed
+
+**Solution**:
+- Improved plugin detection to handle both single and bulk updates
+- Fixed directory name extraction from source path
+- Added cleanup of existing destination directory before rename
+- Better error handling
+
+**Result**: Plugin updates now work reliably from WordPress admin panel
+
+### 📝 Files Modified
+- `includes/class-github-updater.php` - Improved directory fixing logic
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.27
+
+---
+
 ## [1.0.26] - 2026-04-26
 
 ### 🔧 Fixed Duplicate Thana Display
