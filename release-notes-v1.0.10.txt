@@ -1,0 +1,79 @@
+## 🐛 Critical Fixes - Infinite Loop and Dynamic Fields
+
+This release fixes the infinite loop issue and adds dynamic field switching to the meta box.
+
+### Fixed: Infinite Loop on Save (504 Timeout)
+**Problem:** Clicking "Update" caused infinite loop and 504 Gateway Timeout
+**Root Cause:** `woocommerce_update_order` hook was calling `$order->save()` which triggered the same hook again
+**Solution:** Remove the action before saving, then re-add it after
+**Result:** Order saves complete instantly - no more infinite loops!
+
+### Fixed: Fields Not Switching When Country Changes
+**Problem:** Meta box fields were static - didn't change when you changed country/state
+**Solution:** Added inline JavaScript to the meta box for dynamic field switching
+**Result:** Fields now automatically convert between select/input when country/state changes
+
+### Fixed: Shipping Not Auto-Selected with Previous Value
+**Problem:** Saved thana value wasn't being selected in the dropdown
+**Solution:** JavaScript now properly selects the saved value when populating options
+**Result:** Saved values are automatically selected in dropdowns
+
+## ✨ New Features
+
+### Dynamic Field Switching in Meta Box
+- **Listens for changes**: Monitors billing/shipping country and state fields
+- **Auto-converts fields**: Select dropdown for BD states, text input for others
+- **Preserves values**: Keeps your entered value when switching field types
+- **Uses selectWoo**: WooCommerce's enhanced select for better UX
+- **Works for both**: Billing and shipping addresses
+
+## 🔧 Technical Details
+
+### Infinite Loop Prevention
+```php
+// Remove action before save to prevent recursion
+remove_action( 'woocommerce_update_order', array( __CLASS__, 'save_thana_from_hpos_order' ), 10 );
+
+// Save the order
+$order->save();
+
+// Re-add action for next time
+add_action( 'woocommerce_update_order', array( __CLASS__, 'save_thana_from_hpos_order' ), 10, 1 );
+```
+
+### Dynamic Field Switching
+- Inline JavaScript embedded in meta box
+- Monitors: `#_billing_country`, `#_billing_state`, `#_shipping_country`, `#_shipping_state`
+- Converts fields on change event
+- Preserves current value during conversion
+- Initializes selectWoo for enhanced selects
+
+## 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Fixed infinite loop and added dynamic JavaScript
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.10
+- `CHANGELOG.md` - Added v1.0.10 changelog
+
+## 🎯 What Works Now
+
+1. ✅ Order saves complete instantly (no infinite loop)
+2. ✅ Fields switch automatically when country/state changes
+3. ✅ Saved values are auto-selected in dropdowns
+4. ✅ BD states show dropdown with thana options
+5. ✅ Other countries show text input
+6. ✅ Values preserved during field type conversion
+7. ✅ No 504 timeouts
+8. ✅ Clean, working meta box
+
+## 🔗 Links
+- [Full Changelog](https://github.com/imranduzzlo/woocommerce-address-field-manager/blob/main/CHANGELOG.md)
+- [Documentation](https://github.com/imranduzzlo/woocommerce-address-field-manager/blob/main/README.md)
+- [Report Issues](https://github.com/imranduzzlo/woocommerce-address-field-manager/issues)
+
+## 🎉 This Should Work Perfectly Now!
+
+All issues resolved:
+- ✅ No infinite loops
+- ✅ Dynamic field switching
+- ✅ Auto-selected values
+- ✅ Fast saves
+- ✅ Clean UI
