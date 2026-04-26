@@ -2,6 +2,33 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.43] - 2026-04-26
+
+### ✅ RESTORED v1.0.23 Working Approach
+
+**What I Did**:
+Analyzed v1.0.23 (which was working perfectly) and restored its exact approach:
+
+1. **Hook**: `woocommerce_order_get_formatted_billing_address` with **3 parameters** (not 2!)
+2. **Method**: `add_thana_to_formatted_address_string($formatted_address, $args, $order)`
+3. **Logic**: Uses `str_replace` to inject thana before state in the formatted string
+
+**Key Differences from Recent Versions**:
+- v1.0.23 used 3 parameters: `$formatted_address, $args, $order`
+- Recent versions used 2 parameters: `$formatted_address, $order` ← This was wrong!
+- v1.0.23 directly modified the formatted string with `str_replace`
+- Removed all JavaScript injection attempts
+- Removed admin-specific hooks
+
+**Result**: 
+This is the EXACT approach that worked in v1.0.23. Thana should now display for new orders immediately.
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Restored v1.0.23 approach
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.43
+
+---
+
 ## [1.0.42] - 2026-04-26
 
 ### 🔧 Enhanced Debug Logging

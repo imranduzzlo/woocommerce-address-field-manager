@@ -66,9 +66,9 @@ class WAFM_Checkout_Fields {
 		add_filter( 'woocommerce_order_formatted_billing_address', array( __CLASS__, 'add_thana_to_formatted_address' ), 999, 2 );
 		add_filter( 'woocommerce_order_formatted_shipping_address', array( __CLASS__, 'add_thana_to_formatted_address' ), 999, 2 );
 		
-		// Also hook into the final formatted address string to ensure thana is always included
-		add_filter( 'woocommerce_order_get_formatted_billing_address', array( __CLASS__, 'ensure_thana_in_formatted_string' ), 999, 2 );
-		add_filter( 'woocommerce_order_get_formatted_shipping_address', array( __CLASS__, 'ensure_thana_in_formatted_string' ), 999, 2 );
+		// Modify the final formatted address strings to include thana (v1.0.23 working approach)
+		add_filter( 'woocommerce_order_get_formatted_billing_address', array( __CLASS__, 'add_thana_to_formatted_address_string' ), 10, 3 );
+		add_filter( 'woocommerce_order_get_formatted_shipping_address', array( __CLASS__, 'add_thana_to_formatted_address_string' ), 10, 3 );
 
 		// Add thana to customer account page
 		add_filter( 'woocommerce_customer_meta_fields', array( __CLASS__, 'add_customer_thana_fields' ) );
@@ -93,9 +93,6 @@ class WAFM_Checkout_Fields {
 		// Clear session when user updates profile
 		add_action( 'personal_options_update', array( __CLASS__, 'clear_thana_session' ) );
 		add_action( 'edit_user_profile_update', array( __CLASS__, 'clear_thana_session' ) );
-		
-		// Add JavaScript to inject thana into admin address display
-		add_action( 'admin_footer', array( __CLASS__, 'inject_thana_in_admin_display' ) );
 	}
 
 	/**
@@ -456,14 +453,15 @@ class WAFM_Checkout_Fields {
 	}
 
 	/**
-	 * Ensure thana is in the formatted address string (final safety net)
-	 * This runs at the very end to ensure thana is always included
+	 * Modify the formatted address string to include thana (v1.0.23 working approach)
+	 * This runs after WooCommerce formats the address
 	 * 
 	 * @param string $formatted_address The formatted address string
+	 * @param array $args Address arguments
 	 * @param WC_Order $order The order object
 	 * @return string Modified formatted address with thana
 	 */
-	public static function ensure_thana_in_formatted_string( $formatted_address, $order ) {
+	public static function add_thana_to_formatted_address_string( $formatted_address, $args, $order ) {
 		// Ensure we have a valid order object
 		if ( ! is_a( $order, 'WC_Order' ) ) {
 			return $formatted_address;
@@ -473,7 +471,7 @@ class WAFM_Checkout_Fields {
 		$billing_settings = WAFM_Settings::get_billing_settings();
 		$shipping_settings = WAFM_Settings::get_shipping_settings();
 
-		// Check if this is billing or shipping
+		// Check if this is billing or shipping based on the filter
 		$is_billing = current_filter() === 'woocommerce_order_get_formatted_billing_address';
 		$settings = $is_billing ? $billing_settings : $shipping_settings;
 
@@ -491,33 +489,26 @@ class WAFM_Checkout_Fields {
 
 		// Convert code to name for display
 		$thana_name = self::get_thana_name_from_code( $thana_code );
-		if ( ! $thana_name ) {
-			return $formatted_address;
-		}
+		$display_value = $thana_name ? $thana_name : $thana_code;
 
-		// Check if thana is already in the formatted address
-		if ( strpos( $formatted_address, $thana_name ) !== false ) {
-			return $formatted_address; // Already there, don't add again
-		}
-
-		// Get the state to find where to insert thana
+		// Get the state to find where to insert thana (thana goes before state)
 		$state = $is_billing ? $order->get_billing_state() : $order->get_shipping_state();
-		
-		// If state is a code, convert to name for matching
-		if ( $state && strpos( $state, 'BD-' ) === 0 ) {
-			$states = WC()->countries->get_states( 'BD' );
-			$state_name = isset( $states[ $state ] ) ? $states[ $state ] : $state;
-		} else {
-			$state_name = $state;
-		}
 
-		// Insert thana before state in the formatted address
-		if ( $state_name && strpos( $formatted_address, $state_name ) !== false ) {
-			// Add thana on a new line before the state
-			$formatted_address = str_replace( $state_name, $thana_name . '<br/>' . $state_name, $formatted_address );
-		} else {
-			// If we can't find state, just append thana at the end
-			$formatted_address .= '<br/>' . $thana_name;
+		if ( $state ) {
+			// Try to add thana before state
+			// State might be code (BD-58) or name (Satkhira or SATKHIRA)
+			$patterns_to_try = array(
+				'<br/>' . $state,  // Original state
+				'<br/>' . strtoupper( $state ),  // Uppercase
+				'<br/>' . ucwords( strtolower( $state ) ),  // Title case
+			);
+
+			foreach ( $patterns_to_try as $pattern ) {
+				if ( strpos( $formatted_address, $pattern ) !== false ) {
+					$formatted_address = str_replace( $pattern, '<br/>' . $display_value . $pattern, $formatted_address );
+					break;
+				}
+			}
 		}
 
 		return $formatted_address;
@@ -532,6 +523,46 @@ class WAFM_Checkout_Fields {
 		// Thana fields are now editable in the order edit page
 		// See add_editable_thana_to_order_admin method
 		return;
+	}
+
+	/**
+	 * Display thana in admin billing address (WooCommerce proper way)
+	 */
+	public static function display_thana_in_admin_billing( $order ) {
+		$billing_settings = WAFM_Settings::get_billing_settings();
+		if ( ! $billing_settings['enabled'] ) {
+			return;
+		}
+
+		$thana_code = $order->get_meta( '_' . $billing_settings['field_name'] );
+		if ( ! $thana_code ) {
+			return;
+		}
+
+		$thana_name = self::get_thana_name_from_code( $thana_code );
+		if ( $thana_name ) {
+			echo '<p class="form-field form-field-wide"><strong>' . esc_html( $billing_settings['label'] ) . ':</strong> ' . esc_html( $thana_name ) . '</p>';
+		}
+	}
+
+	/**
+	 * Display thana in admin shipping address (WooCommerce proper way)
+	 */
+	public static function display_thana_in_admin_shipping( $order ) {
+		$shipping_settings = WAFM_Settings::get_shipping_settings();
+		if ( ! $shipping_settings['enabled'] ) {
+			return;
+		}
+
+		$thana_code = $order->get_meta( '_' . $shipping_settings['field_name'] );
+		if ( ! $thana_code ) {
+			return;
+		}
+
+		$thana_name = self::get_thana_name_from_code( $thana_code );
+		if ( $thana_name ) {
+			echo '<p class="form-field form-field-wide"><strong>' . esc_html( $shipping_settings['label'] ) . ':</strong> ' . esc_html( $thana_name ) . '</p>';
+		}
 	}
 
 	/**
@@ -940,190 +971,6 @@ class WAFM_Checkout_Fields {
 		}
 		
 		return '';
-	}
-
-	/**
-	 * Inject thana into admin address display using JavaScript
-	 * This is the final solution to ensure thana always shows in admin
-	 */
-	public static function inject_thana_in_admin_display() {
-		$screen = get_current_screen();
-		if ( ! $screen || ( $screen->id !== 'shop_order' && $screen->id !== 'woocommerce_page_wc-orders' ) ) {
-			return;
-		}
-
-		global $post;
-		$order_id = $post ? $post->ID : ( isset( $_GET['id'] ) ? intval( $_GET['id'] ) : 0 );
-		if ( ! $order_id ) {
-			return;
-		}
-
-		$order = wc_get_order( $order_id );
-		if ( ! $order ) {
-			return;
-		}
-
-		// Get settings
-		$billing_settings = WAFM_Settings::get_billing_settings();
-		$shipping_settings = WAFM_Settings::get_shipping_settings();
-		
-		// Get thana codes and convert to names
-		$billing_thana_code = $order->get_meta( '_' . $billing_settings['field_name'] );
-		$shipping_thana_code = $order->get_meta( '_' . $shipping_settings['field_name'] );
-		
-		$billing_thana_name = $billing_thana_code ? self::get_thana_name_from_code( $billing_thana_code ) : '';
-		$shipping_thana_name = $shipping_thana_code ? self::get_thana_name_from_code( $shipping_thana_code ) : '';
-		
-		// Get state for positioning
-		$billing_state = $order->get_billing_state();
-		$shipping_state = $order->get_shipping_state();
-		
-		// Convert state codes to names for matching
-		if ( $billing_state && strpos( $billing_state, 'BD-' ) === 0 ) {
-			$states = WC()->countries->get_states( 'BD' );
-			$billing_state_name = isset( $states[ $billing_state ] ) ? $states[ $billing_state ] : $billing_state;
-		} else {
-			$billing_state_name = $billing_state;
-		}
-		
-		if ( $shipping_state && strpos( $shipping_state, 'BD-' ) === 0 ) {
-			$states = WC()->countries->get_states( 'BD' );
-			$shipping_state_name = isset( $states[ $shipping_state ] ) ? $states[ $shipping_state ] : $shipping_state;
-		} else {
-			$shipping_state_name = $shipping_state;
-		}
-		
-		?>
-		<script type="text/javascript">
-		console.log('WAFM: Thana injection script loaded');
-		console.log('WAFM: Order ID:', <?php echo $order_id; ?>);
-		console.log('WAFM: Billing thana:', '<?php echo esc_js( $billing_thana_name ); ?>');
-		console.log('WAFM: Shipping thana:', '<?php echo esc_js( $shipping_thana_name ); ?>');
-		
-		jQuery(document).ready(function($) {
-			console.log('WAFM: jQuery ready');
-			
-			// Find address columns
-			var billingColumn = $('.order_data_column').eq(0);
-			var shippingColumn = $('.order_data_column').eq(1);
-			
-			console.log('WAFM: Billing column found:', billingColumn.length > 0);
-			console.log('WAFM: Shipping column found:', shippingColumn.length > 0);
-			
-			<?php if ( $billing_thana_name ) : ?>
-			// Inject billing thana before state
-			var $billingAddress = billingColumn.find('.address');
-			if ($billingAddress.length > 0) {
-				var html = $billingAddress.html();
-				console.log('WAFM: Billing address HTML:', html);
-				console.log('WAFM: Looking for billing thana:', '<?php echo esc_js( $billing_thana_name ); ?>');
-				
-				// Check if thana is already there
-				if (html.indexOf('<?php echo esc_js( $billing_thana_name ); ?>') === -1) {
-					// Try to find state in different formats
-					var stateUpper = '<?php echo esc_js( strtoupper( $billing_state_name ) ); ?>';
-					var stateTitle = '<?php echo esc_js( ucwords( strtolower( $billing_state_name ) ) ); ?>';
-					var stateOriginal = '<?php echo esc_js( $billing_state_name ); ?>';
-					
-					console.log('WAFM: Looking for state (upper):', stateUpper);
-					console.log('WAFM: Looking for state (title):', stateTitle);
-					console.log('WAFM: Looking for state (original):', stateOriginal);
-					
-					var replaced = false;
-					
-					// Try uppercase first (SATKHIRA)
-					if (!replaced && html.indexOf(stateUpper) !== -1) {
-						html = html.replace(stateUpper, '<?php echo esc_js( $billing_thana_name ); ?><br/>' + stateUpper);
-						replaced = true;
-						console.log('WAFM: Replaced with uppercase state');
-					}
-					
-					// Try title case (Satkhira)
-					if (!replaced && html.indexOf(stateTitle) !== -1) {
-						html = html.replace(stateTitle, '<?php echo esc_js( $billing_thana_name ); ?><br/>' + stateTitle);
-						replaced = true;
-						console.log('WAFM: Replaced with title case state');
-					}
-					
-					// Try original
-					if (!replaced && html.indexOf(stateOriginal) !== -1) {
-						html = html.replace(stateOriginal, '<?php echo esc_js( $billing_thana_name ); ?><br/>' + stateOriginal);
-						replaced = true;
-						console.log('WAFM: Replaced with original state');
-					}
-					
-					if (replaced) {
-						$billingAddress.html(html);
-						console.log('WAFM: Updated billing address');
-					} else {
-						console.log('WAFM: Could not find state to replace in billing');
-					}
-				} else {
-					console.log('WAFM: Thana already in billing address');
-				}
-			} else {
-				console.log('WAFM: Billing address element not found');
-			}
-			<?php endif; ?>
-			
-			<?php if ( $shipping_thana_name ) : ?>
-			// Inject shipping thana before state
-			var $shippingAddress = shippingColumn.find('.address');
-			if ($shippingAddress.length > 0) {
-				var html = $shippingAddress.html();
-				console.log('WAFM: Shipping address HTML:', html);
-				console.log('WAFM: Looking for shipping thana:', '<?php echo esc_js( $shipping_thana_name ); ?>');
-				
-				// Check if thana is already there
-				if (html.indexOf('<?php echo esc_js( $shipping_thana_name ); ?>') === -1) {
-					// Try to find state in different formats
-					var stateUpper = '<?php echo esc_js( strtoupper( $shipping_state_name ) ); ?>';
-					var stateTitle = '<?php echo esc_js( ucwords( strtolower( $shipping_state_name ) ) ); ?>';
-					var stateOriginal = '<?php echo esc_js( $shipping_state_name ); ?>';
-					
-					console.log('WAFM: Looking for state (upper):', stateUpper);
-					console.log('WAFM: Looking for state (title):', stateTitle);
-					console.log('WAFM: Looking for state (original):', stateOriginal);
-					
-					var replaced = false;
-					
-					// Try uppercase first (SATKHIRA)
-					if (!replaced && html.indexOf(stateUpper) !== -1) {
-						html = html.replace(stateUpper, '<?php echo esc_js( $shipping_thana_name ); ?><br/>' + stateUpper);
-						replaced = true;
-						console.log('WAFM: Replaced with uppercase state');
-					}
-					
-					// Try title case (Satkhira)
-					if (!replaced && html.indexOf(stateTitle) !== -1) {
-						html = html.replace(stateTitle, '<?php echo esc_js( $shipping_thana_name ); ?><br/>' + stateTitle);
-						replaced = true;
-						console.log('WAFM: Replaced with title case state');
-					}
-					
-					// Try original
-					if (!replaced && html.indexOf(stateOriginal) !== -1) {
-						html = html.replace(stateOriginal, '<?php echo esc_js( $shipping_thana_name ); ?><br/>' + stateOriginal);
-						replaced = true;
-						console.log('WAFM: Replaced with original state');
-					}
-					
-					if (replaced) {
-						$shippingAddress.html(html);
-						console.log('WAFM: Updated shipping address');
-					} else {
-						console.log('WAFM: Could not find state to replace in shipping');
-					}
-				} else {
-					console.log('WAFM: Thana already in shipping address');
-				}
-			} else {
-				console.log('WAFM: Shipping address element not found');
-			}
-			<?php endif; ?>
-		});
-		</script>
-		<?php
 	}
 
 	/**
