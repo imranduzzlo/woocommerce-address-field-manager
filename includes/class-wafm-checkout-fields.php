@@ -714,12 +714,26 @@ class WAFM_Checkout_Fields {
 		$billing_settings = WAFM_Settings::get_billing_settings();
 		$shipping_settings = WAFM_Settings::get_shipping_settings();
 
-		// Add thana to Bangladesh address format
+		// Add thana placeholders to Bangladesh address format
 		if ( isset( $formats['BD'] ) ) {
-			// Add billing thana placeholder after state if billing is enabled
+			// We need to add both billing and shipping thana placeholders
+			// WooCommerce will use the appropriate one based on context
+			$format = $formats['BD'];
+			
+			// Add billing thana after state if enabled
 			if ( $billing_settings['enabled'] ) {
-				$formats['BD'] = str_replace( '{state}', '{state}\n{' . $billing_settings['field_name'] . '}', $formats['BD'] );
+				$format = str_replace( '{state}', '{state}\n{' . $billing_settings['field_name'] . '}', $format );
 			}
+			
+			// Add shipping thana after state if enabled
+			if ( $shipping_settings['enabled'] ) {
+				// Only add if not already added (in case field names are the same)
+				if ( strpos( $format, '{' . $shipping_settings['field_name'] . '}' ) === false ) {
+					$format = str_replace( '{state}', '{state}\n{' . $shipping_settings['field_name'] . '}', $format );
+				}
+			}
+			
+			$formats['BD'] = $format;
 		}
 
 		return $formats;

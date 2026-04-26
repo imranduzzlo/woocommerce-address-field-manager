@@ -2,6 +2,47 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.18] - 2026-04-26
+
+### 🔧 Fixed Thana Display in Address Blocks
+
+**Problem**: Thana was only showing in separate custom fields table, not inside the address blocks on thank you page
+
+**Root Cause**: 
+- Address format only added billing thana placeholder
+- Shipping thana placeholder was missing
+- Both billing and shipping addresses use the same BD format template
+
+**Solution**:
+- Added both billing and shipping thana placeholders to BD address format
+- Checks to avoid duplicate placeholders if field names are the same
+- Now thana displays inside the address block where it belongs
+
+### 📝 What Shows Now
+**Before**: 
+```
+Address:
+Md Imran
+Baliadanga, Hathatgonj, Satkhira Sadar
+Satkhira
+
+[Separate table below with thana]
+```
+
+**After**:
+```
+Address:
+Md Imran
+Baliadanga, Hathatgonj, Satkhira Sadar
+Satkhira
+[Thana Name Here]  ← Shows inside address block
+```
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Fixed address format to include both billing and shipping thana
+
+---
+
 ## [1.0.17] - 2026-04-26
 
 ### 🔧 Fixed Settings Page Tabs - WordPress Standard URL Parameters
