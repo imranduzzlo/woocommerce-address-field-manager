@@ -50,7 +50,10 @@ class WAFM_Checkout_Fields {
 		add_filter( 'woocommerce_get_customer_address_fields', array( __CLASS__, 'register_thana_address_field' ) );
 
 		// Add thana to address format for thank you page and emails
-		add_filter( 'woocommerce_localisation_address_formats', array( __CLASS__, 'add_thana_to_address_format' ) );
+		add_filter( 'woocommerce_localisation_address_formats', array( __CLASS__, 'add_thana_to_address_format' ), 20 );
+		
+		// Add thana replacement values when formatting address
+		add_filter( 'woocommerce_formatted_address_replacements', array( __CLASS__, 'add_thana_replacement' ), 10, 2 );
 
 		// Add thana values to formatted address arrays
 		add_filter( 'woocommerce_order_formatted_billing_address', array( __CLASS__, 'add_thana_to_formatted_address' ), 10, 2 );
@@ -738,6 +741,27 @@ class WAFM_Checkout_Fields {
 		}
 
 		return $formats;
+	}
+
+	/**
+	 * Add thana replacement value when formatting address
+	 * This filter is called when WooCommerce actually formats the address for display
+	 */
+	public static function add_thana_replacement( $replacements, $args ) {
+		error_log( 'WAFM Debug - Replacements filter called' );
+		error_log( 'WAFM Debug - Args keys: ' . implode( ', ', array_keys( $args ) ) );
+		
+		// Check if thana exists in args
+		if ( isset( $args['thana'] ) && ! empty( $args['thana'] ) ) {
+			$replacements['{thana}'] = $args['thana'];
+			error_log( 'WAFM Debug - Added replacement: {thana} = ' . $args['thana'] );
+		} else {
+			// If no thana, replace with empty string to avoid showing {thana} placeholder
+			$replacements['{thana}'] = '';
+			error_log( 'WAFM Debug - No thana in args, using empty string' );
+		}
+		
+		return $replacements;
 	}
 
 	/**
