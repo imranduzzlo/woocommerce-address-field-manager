@@ -34,15 +34,11 @@
 }
 
 .tab-content {
-	display: none;
+	display: block;
 	background: #fff;
 	padding: 20px;
 	border: 1px solid #ccc;
 	border-top: none;
-}
-
-.tab-content.active {
-	display: block;
 }
 
 .tab-content .form-table {

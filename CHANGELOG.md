@@ -2,6 +2,33 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.45] - 2026-04-27
+
+### 🔧 Fixed Settings Page Display Issue
+
+**Problem**: 
+Settings page was completely blank - no content showing for any tab (Billing, Shipping, or Plugin Updater).
+
+**Root Cause**:
+CSS had `display: none` on all `.tab-content` elements by default, with only `.tab-content.active` set to `display: block`. However, the PHP code uses conditional rendering (`<?php if ( $current_tab === 'billing' ) : ?>`) instead of adding an `active` class, so the CSS was hiding all content.
+
+**Solution**:
+- Changed `.tab-content` CSS from `display: none` to `display: block`
+- Removed `.tab-content.active` rule (not needed with conditional rendering)
+- Tabs work via URL parameters (`?tab=billing`) with PHP conditional rendering
+
+**Result**: 
+- ✅ Settings page now displays correctly
+- ✅ All tabs (Billing, Shipping, Plugin Updater) show their content
+- ✅ Tab switching works properly via URL parameters
+- ✅ Follows WordPress standard pattern
+
+### 📝 Files Modified
+- `assets/css/admin-settings.css` - Fixed tab content display
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.45
+
+---
+
 ## [1.0.44] - 2026-04-26
 
 ### 🔧 Fixed Duplicate Thana After Edit
