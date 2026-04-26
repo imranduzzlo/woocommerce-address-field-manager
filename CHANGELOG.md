@@ -2,6 +2,26 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.13] - 2026-04-26
+
+### ✅ Confirmed Fix - No More Duplicate Fields
+
+**Status: Issue Resolved**
+- Confirmed that the duplicate field issue from v1.0.12 is fully resolved
+- Both billing and shipping fields work independently
+- Clean field conversion between select dropdown and text input
+- No duplicate fields appear when changing countries/states
+
+### 🎯 What Works Now
+- ✅ Billing field reacts to billing country/state changes
+- ✅ Shipping field reacts to shipping country/state changes  
+- ✅ Fields work independently without interfering with each other
+- ✅ Only ONE field shows at a time (no duplicates)
+- ✅ Values preserved during field type conversion
+- ✅ Select2 properly destroyed before field replacement
+
+---
+
 ## [1.0.12] - 2026-04-26
 
 ### 🐛 Critical Fix - Duplicate Fields When Converting
