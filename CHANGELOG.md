@@ -2,6 +2,41 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.9] - 2026-04-26
+
+### 🐛 Critical Fix - Infinite Loading and Duplicate Fields
+
+**Fixed: 504 Gateway Timeout and Infinite Loading**
+- **Problem**: Clicking "Update" caused infinite loading and 504 timeout errors
+- **Root Cause**: JavaScript `order-edit.js` was trying to dynamically convert fields that don't exist anymore
+- **Solution**: Completely disabled the order edit JavaScript
+- **Result**: Order updates complete instantly without any issues
+
+**Fixed: Duplicate Fields (Input + Select)**
+- **Problem**: When changing country, both input and select fields appeared
+- **Root Cause**: JavaScript was creating duplicate fields while meta box already rendered them
+- **Solution**: Disabled JavaScript - meta box is now the only field renderer
+- **Result**: Clean, single field display in meta box
+
+### 🔧 Technical Details
+
+**Disabled Components:**
+- `enqueue_order_edit_assets()` - Now returns immediately
+- `order-edit.js` - No longer loaded on order edit pages
+- `wafmOrderEditData` - No longer localized
+
+**Why This Works:**
+- Meta box renders fields server-side (PHP)
+- No JavaScript manipulation needed
+- Fields are static and reliable
+- No conflicts or race conditions
+- Faster page load and save
+
+### 📝 Files Modified
+- `includes/class-wafm-settings.php` - Disabled order edit JavaScript enqueue
+
+---
+
 ## [1.0.8] - 2026-04-26
 
 ### 🐛 Critical Fix - Billing Dropdown Now Works
