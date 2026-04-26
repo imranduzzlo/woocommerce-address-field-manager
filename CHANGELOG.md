@@ -2,6 +2,21 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.6] - 2026-04-26
+
+### 🔧 Maintenance Release
+
+**Stability Improvements**
+- Verified HPOS meta box implementation is working correctly
+- Confirmed thana fields display properly in order edit sidebar
+- Tested save functionality for both HPOS and traditional orders
+- Ensured cache clearing works after order updates
+
+### 📝 Notes
+This is a maintenance release to ensure all components are working correctly after the HPOS meta box implementation in v1.0.5.
+
+---
+
 ## [1.0.5] - 2026-04-26
 
 ### 🚀 Major Fix - HPOS Compatibility
