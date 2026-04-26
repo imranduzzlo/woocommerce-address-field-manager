@@ -2,6 +2,52 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.11] - 2026-04-26
+
+### 🐛 Critical Fixes
+
+**Fixed: Billing Field Not Reacting to Changes**
+- **Problem**: Only shipping field was reacting to country/state changes, billing stayed the same
+- **Root Cause**: JavaScript was using hardcoded field names in PHP template strings
+- **Solution**: Store field names in JavaScript variables and use them dynamically
+- **Result**: Both billing and shipping fields now react properly to changes
+
+**Fixed: Duplicate Select Fields Appearing**
+- **Problem**: When changing country/state, multiple select fields appeared
+- **Root Cause**: Field replacement wasn't properly targeting the correct field
+- **Solution**: Use proper field name variables and re-select after replacement
+- **Result**: Clean, single field display - no more duplicates
+
+**Fixed: Input Field Showing with Null Value**
+- **Problem**: When changing to non-BD country, input appeared with empty value
+- **Root Cause**: Current value wasn't being preserved during conversion
+- **Solution**: Properly capture and restore current value during field conversion
+- **Result**: Values are preserved when switching field types
+
+### 🔧 Technical Improvements
+
+**Better Field Name Handling:**
+```javascript
+var billingFieldName = 'billing_thana';
+var shippingFieldName = 'shipping_thana';
+var thanaField = $('#_' + fieldName);  // Dynamic field selection
+```
+
+**Added Debug Logging:**
+- Console logs show which field is being updated
+- Shows country, state, and current value
+- Helps troubleshoot field conversion issues
+
+**Proper Field Replacement:**
+- Constructs field ID/name from variables
+- Re-selects field after replacement
+- Prevents duplicate field creation
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Fixed JavaScript field handling
+
+---
+
 ## [1.0.10] - 2026-04-26
 
 ### 🐛 Critical Fixes
