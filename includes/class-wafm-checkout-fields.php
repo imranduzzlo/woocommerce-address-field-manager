@@ -339,8 +339,9 @@ class WAFM_Checkout_Fields {
 			return $address;
 		}
 
-		// Get thana code - use comprehensive cache clearing approach
-		$thana_code = self::get_fresh_order_meta( $order, $settings['field_name'] );
+		// Get thana code from order meta - simple and direct like the old version
+		$meta_key = '_' . $settings['field_name'];
+		$thana_code = $order->get_meta( $meta_key );
 
 		if ( ! $thana_code ) {
 			return $address;
@@ -740,10 +741,10 @@ class WAFM_Checkout_Fields {
 		// Collect thana fields to display
 		$thana_fields = array();
 
-		// Check billing thana - use comprehensive cache clearing
+		// Check billing thana - simple and direct like the old version
 		if ( $billing_settings['enabled'] ) {
-			$thana_code = self::get_fresh_order_meta( $order, $billing_settings['field_name'] );
-			
+			$meta_key = '_' . $billing_settings['field_name'];
+			$thana_code = $order->get_meta( $meta_key );
 			if ( $thana_code ) {
 				$thana_name = self::get_thana_name_from_code( $thana_code );
 				$display_value = $thana_name ? $thana_name : $thana_code;
@@ -754,10 +755,10 @@ class WAFM_Checkout_Fields {
 			}
 		}
 
-		// Check shipping thana - use comprehensive cache clearing
+		// Check shipping thana - simple and direct like the old version
 		if ( $shipping_settings['enabled'] ) {
-			$thana_code = self::get_fresh_order_meta( $order, $shipping_settings['field_name'] );
-			
+			$meta_key = '_' . $shipping_settings['field_name'];
+			$thana_code = $order->get_meta( $meta_key );
 			if ( $thana_code ) {
 				$thana_name = self::get_thana_name_from_code( $thana_code );
 				$display_value = $thana_name ? $thana_name : $thana_code;
@@ -1247,77 +1248,6 @@ class WAFM_Checkout_Fields {
 		
 		// Re-add the action for next time
 		add_action( 'woocommerce_update_order', array( __CLASS__, 'save_thana_from_hpos_order' ), 10, 1 );
-	}
-
-	/**
-	 * Get fresh order meta bypassing all caches
-	 * This ensures we always get the latest data from database
-	 */
-	private static function get_fresh_order_meta( $order, $field_name ) {
-		$order_id = $order->get_id();
-		$meta_key = '_' . $field_name;
-		
-		// Clear ALL possible caches for this order
-		self::clear_all_order_caches( $order_id );
-		
-		// Try multiple methods to get the freshest data
-		$thana_code = '';
-		
-		// Method 1: Direct database query (most reliable)
-		global $wpdb;
-		
-		// Check if HPOS is enabled
-		$hpos_enabled = class_exists( '\Automattic\WooCommerce\Utilities\OrderUtil' ) 
-			&& \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled();
-		
-		if ( $hpos_enabled ) {
-			// HPOS: Query from wc_orders_meta table
-			$table = $wpdb->prefix . 'wc_orders_meta';
-			$thana_code = $wpdb->get_var( $wpdb->prepare(
-				"SELECT meta_value FROM {$table} WHERE order_id = %d AND meta_key = %s ORDER BY meta_id DESC LIMIT 1",
-				$order_id,
-				$meta_key
-			) );
-			
-			// Try without underscore if not found
-			if ( ! $thana_code ) {
-				$thana_code = $wpdb->get_var( $wpdb->prepare(
-					"SELECT meta_value FROM {$table} WHERE order_id = %d AND meta_key = %s ORDER BY meta_id DESC LIMIT 1",
-					$order_id,
-					$field_name
-				) );
-			}
-		} else {
-			// Traditional: Query from postmeta table
-			$thana_code = $wpdb->get_var( $wpdb->prepare(
-				"SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = %s ORDER BY meta_id DESC LIMIT 1",
-				$order_id,
-				$meta_key
-			) );
-			
-			// Try without underscore if not found
-			if ( ! $thana_code ) {
-				$thana_code = $wpdb->get_var( $wpdb->prepare(
-					"SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id = %d AND meta_key = %s ORDER BY meta_id DESC LIMIT 1",
-					$order_id,
-					$field_name
-				) );
-			}
-		}
-		
-		// Method 2: Fallback to WooCommerce methods if direct query fails
-		if ( ! $thana_code ) {
-			// Refresh order object from database
-			$fresh_order = wc_get_order( $order_id );
-			if ( $fresh_order ) {
-				$thana_code = $fresh_order->get_meta( $meta_key, true, 'edit' );
-				if ( ! $thana_code ) {
-					$thana_code = $fresh_order->get_meta( $field_name, true, 'edit' );
-				}
-			}
-		}
-		
-		return $thana_code;
 	}
 
 	/**

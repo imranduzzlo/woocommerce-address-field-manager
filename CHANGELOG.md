@@ -2,6 +2,42 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.16] - 2026-04-26
+
+### 🔧 Simplified Cache Approach - Back to Basics
+
+**Problem**: v1.0.15's complex cache clearing wasn't working - thank you page still showed old data
+
+**Root Cause Analysis**:
+- Reviewed old working version (`bd-thana-add-old`)
+- Found they used simple `$order->get_meta()` without any cache manipulation
+- Our over-complicated approach with database queries was causing issues
+- WooCommerce's `get_meta()` already handles HPOS and caching properly
+
+**Solution - Keep It Simple**:
+- Removed complex `get_fresh_order_meta()` method with direct database queries
+- Reverted to simple `$order->get_meta()` like the old working version
+- Kept automatic cache clearing hooks for when meta is updated
+- Let WooCommerce handle its own caching internally
+
+### 📝 What Changed
+- ✅ Simplified `display_thana_custom_field()` - uses `$order->get_meta()` directly
+- ✅ Simplified `add_thana_to_formatted_address()` - uses `$order->get_meta()` directly
+- ✅ Removed `get_fresh_order_meta()` method (over-engineered)
+- ✅ Kept `clear_all_order_caches()` for when we save data
+- ✅ Kept automatic cache clearing hooks for external updates
+
+### 🎯 Philosophy
+- Don't fight WooCommerce's caching system
+- Use WooCommerce methods as intended
+- Clear cache when WE update, trust WooCommerce for reads
+- Simple is better than complex
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Simplified data retrieval approach
+
+---
+
 ## [1.0.15] - 2026-04-26
 
 ### 🔧 Fixed Cache Issues - Always Show Latest Data
