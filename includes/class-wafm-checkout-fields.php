@@ -24,6 +24,9 @@ class WAFM_Checkout_Fields {
 		// Save thana fields
 		add_action( 'woocommerce_checkout_process', array( __CLASS__, 'validate_thana_fields' ) );
 		add_action( 'woocommerce_checkout_update_order_meta', array( __CLASS__, 'save_thana_fields' ) );
+		
+		// Process address data after order is created to format state and add thana display values
+		add_action( 'woocommerce_checkout_order_created', array( __CLASS__, 'process_order_address_on_creation' ), 20, 1 );
 
 		// Make thana editable in admin order page - DISABLED (using meta box instead)
 		// add_filter( 'woocommerce_admin_billing_fields', array( __CLASS__, 'add_editable_billing_thana_to_order_admin' ) );
@@ -226,6 +229,66 @@ class WAFM_Checkout_Fields {
 		}
 
 		return $store_country;
+	}
+
+	/**
+	 * Process order address on creation to format state and add thana display values
+	 * This ensures new orders show formatted addresses immediately
+	 */
+	public static function process_order_address_on_creation( $order ) {
+		if ( ! is_a( $order, 'WC_Order' ) ) {
+			return;
+		}
+
+		$billing_settings = WAFM_Settings::get_billing_settings();
+		$shipping_settings = WAFM_Settings::get_shipping_settings();
+
+		// Process billing address
+		$billing_state = $order->get_billing_state();
+		if ( $billing_state && strpos( $billing_state, 'BD-' ) === 0 ) {
+			// Convert state code to name
+			$states = WC()->countries->get_states( 'BD' );
+			if ( isset( $states[ $billing_state ] ) ) {
+				$order->set_billing_state( $states[ $billing_state ] );
+			}
+		}
+
+		// Process billing thana - convert code to name and set as city
+		if ( $billing_settings['enabled'] ) {
+			$thana_code = $order->get_meta( '_' . $billing_settings['field_name'] );
+			if ( $thana_code ) {
+				$thana_name = self::get_thana_name_from_code( $thana_code );
+				if ( $thana_name ) {
+					// Set thana name as city for display
+					$order->set_billing_city( $thana_name );
+				}
+			}
+		}
+
+		// Process shipping address
+		$shipping_state = $order->get_shipping_state();
+		if ( $shipping_state && strpos( $shipping_state, 'BD-' ) === 0 ) {
+			// Convert state code to name
+			$states = WC()->countries->get_states( 'BD' );
+			if ( isset( $states[ $shipping_state ] ) ) {
+				$order->set_shipping_state( $states[ $shipping_state ] );
+			}
+		}
+
+		// Process shipping thana - convert code to name and set as city
+		if ( $shipping_settings['enabled'] ) {
+			$thana_code = $order->get_meta( '_' . $shipping_settings['field_name'] );
+			if ( $thana_code ) {
+				$thana_name = self::get_thana_name_from_code( $thana_code );
+				if ( $thana_name ) {
+					// Set thana name as city for display
+					$order->set_shipping_city( $thana_name );
+				}
+			}
+		}
+
+		// Save the order with updated values
+		$order->save();
 	}
 
 	/**

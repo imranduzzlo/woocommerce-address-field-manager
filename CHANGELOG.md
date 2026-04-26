@@ -2,6 +2,51 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.29] - 2026-04-26
+
+### 🔧 Fixed New Order Address Display
+
+**Problem**: 
+New orders showed:
+```
+Baliadanga, Hathatgonj
+BD-58                    ← State CODE
+```
+❌ No thana, state as code
+
+Only after clicking "Edit" and "Update" (even without changes), it showed:
+```
+Baliadanga, Hathatgonj
+Satkhira Sadar          ← Thana NAME
+SATKHIRA                ← State NAME
+```
+✅ Perfect!
+
+**Root Cause**:
+- WooCommerce saves RAW field values during checkout (codes, not names)
+- `billing_state` = "BD-58" (code)
+- `billing_thana` = "BD-58-05" (code)
+- Our formatting filters only worked when address was re-processed (during edit)
+
+**Solution**:
+- Added `process_order_address_on_creation()` method
+- Hooks into `woocommerce_checkout_order_created` (priority 20)
+- Converts state codes to names immediately after order creation
+- Converts thana codes to names and sets as city
+- Saves formatted values to order
+
+**Result**: 
+New orders now show formatted addresses immediately:
+- State shows as "SATKHIRA" instead of "BD-58"
+- Thana shows as "Satkhira Sadar" 
+- Works for checkout, admin, emails, everywhere!
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Added order creation address processing
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.29
+
+---
+
 ## [1.0.28] - 2026-04-26
 
 ### 🔧 Fixed Admin Address Display
