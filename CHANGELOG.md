@@ -2,6 +2,30 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.4] - 2026-04-26
+
+### 🐛 Bug Fixes
+
+**Admin Order Edit Improvements**
+- Enhanced admin order edit dropdown population with better field detection
+- Added comprehensive debug logging to troubleshoot dropdown issues
+- Improved field initialization timing with delayed execution
+- Added alternative field selector fallback for better compatibility
+- Better handling of saved thana values in admin order edit
+- Fixed field conversion between select and text input
+
+### 🔧 Technical Improvements
+- Added console logging for debugging admin order edit issues
+- Logs show: data loading status, field detection, value population, option count
+- Improved field detection with multiple selector strategies
+- Better value restoration when converting between field types
+- Enhanced state and country change detection
+
+### 📝 Files Modified
+- `assets/js/order-edit.js` - Enhanced with debug logging and better field handling
+
+---
+
 ## [1.0.3] - 2026-04-26
 
 ### ✨ New Feature
