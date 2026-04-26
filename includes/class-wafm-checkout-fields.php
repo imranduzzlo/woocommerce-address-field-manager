@@ -265,6 +265,12 @@ class WAFM_Checkout_Fields {
 		$billing_settings = WAFM_Settings::get_billing_settings();
 		$shipping_settings = WAFM_Settings::get_shipping_settings();
 
+		// Get the order object
+		$order = wc_get_order( $order_id );
+		if ( ! $order ) {
+			return;
+		}
+
 		// Save billing thana to order and user meta
 		if ( $billing_settings['enabled'] && isset( $_POST[ $billing_settings['field_name'] ] ) ) {
 			$billing_thana = sanitize_text_field( wp_unslash( $_POST[ $billing_settings['field_name'] ] ) );
@@ -273,6 +279,12 @@ class WAFM_Checkout_Fields {
 			// Also save to user meta if logged in
 			if ( $user_id ) {
 				update_user_meta( $user_id, $billing_settings['field_name'], $billing_thana );
+			}
+			
+			// Convert thana code to name and set as city for display
+			$thana_name = self::get_thana_name_from_code( $billing_thana );
+			if ( $thana_name ) {
+				$order->set_billing_city( $thana_name );
 			}
 		}
 
@@ -285,7 +297,33 @@ class WAFM_Checkout_Fields {
 			if ( $user_id ) {
 				update_user_meta( $user_id, $shipping_settings['field_name'], $shipping_thana );
 			}
+			
+			// Convert thana code to name and set as city for display
+			$thana_name = self::get_thana_name_from_code( $shipping_thana );
+			if ( $thana_name ) {
+				$order->set_shipping_city( $thana_name );
+			}
 		}
+
+		// Convert state codes to names for display (fix WooCommerce core issue)
+		$billing_state = $order->get_billing_state();
+		if ( $billing_state && strpos( $billing_state, 'BD-' ) === 0 ) {
+			$states = WC()->countries->get_states( 'BD' );
+			if ( isset( $states[ $billing_state ] ) ) {
+				$order->set_billing_state( $states[ $billing_state ] );
+			}
+		}
+
+		$shipping_state = $order->get_shipping_state();
+		if ( $shipping_state && strpos( $shipping_state, 'BD-' ) === 0 ) {
+			$states = WC()->countries->get_states( 'BD' );
+			if ( isset( $states[ $shipping_state ] ) ) {
+				$order->set_shipping_state( $states[ $shipping_state ] );
+			}
+		}
+
+		// Save the order with formatted values
+		$order->save();
 	}
 
 	/**

@@ -2,6 +2,44 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.32] - 2026-04-26
+
+### 🔧 Fixed WooCommerce Core Issue - Convert Codes to Names at Save Time
+
+**Discovery**: 
+This is a **WooCommerce core issue**, not our plugin! Even WITHOUT our plugin:
+- New orders show: "BD-58" (code)
+- After editing: "SATKHIRA" (formatted)
+
+WooCommerce caches raw form data during checkout and doesn't format it until the order is "touched".
+
+**The Real Solution**:
+Instead of trying to format AFTER save, we now convert codes to names DURING save in `save_thana_fields()`:
+
+1. **Save thana code** to meta (for reference): `_billing_thana` = "BD-58-05"
+2. **Convert thana code to name** and set as city: `billing_city` = "Satkhira Sadar"
+3. **Convert state code to name**: `billing_state` = "SATKHIRA" (not "BD-58")
+4. **Save order** with formatted values
+
+**Why This Works**:
+- Codes are saved in meta fields (data integrity)
+- Display fields (city, state) store names (user-friendly)
+- No cache issues - values are correct from the start
+- Fixes WooCommerce core behavior
+
+**Result**: 
+- ✅ New orders show formatted immediately
+- ✅ State shows as "SATKHIRA" not "BD-58"
+- ✅ Thana shows as "Satkhira Sadar"
+- ✅ Works everywhere: admin, thank you page, emails
+- ✅ Codes preserved in meta fields
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Convert codes to names during save
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.32
+
+---
+
 ## [1.0.31] - 2026-04-26
 
 ### 🔧 Fixed New Order Cache Issue
