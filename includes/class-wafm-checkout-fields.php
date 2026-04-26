@@ -755,13 +755,24 @@ class WAFM_Checkout_Fields {
 	 * This runs after WooCommerce formats the address
 	 */
 	public static function add_thana_to_formatted_address_string( $formatted_address, $args ) {
+		// Debug logging
+		error_log( 'WAFM Debug - Formatted Address String Filter' );
+		error_log( 'WAFM Debug - Args: ' . print_r( $args, true ) );
+		error_log( 'WAFM Debug - Formatted Address Before: ' . $formatted_address );
+		
 		// Check if thana exists and address is for Bangladesh
 		if ( isset( $args['thana'] ) && ! empty( $args['thana'] ) && isset( $args['country'] ) && $args['country'] === 'BD' ) {
 			// Add thana after state line
 			if ( isset( $args['state'] ) && ! empty( $args['state'] ) ) {
 				$state_name = WC()->countries->get_states( 'BD' )[ $args['state'] ] ?? $args['state'];
+				error_log( 'WAFM Debug - State Code: ' . $args['state'] );
+				error_log( 'WAFM Debug - State Name: ' . $state_name );
+				error_log( 'WAFM Debug - Thana: ' . $args['thana'] );
+				
 				// Find the state in the formatted address and add thana after it
 				$formatted_address = str_replace( $state_name, $state_name . "\n" . $args['thana'], $formatted_address );
+				
+				error_log( 'WAFM Debug - Formatted Address After: ' . $formatted_address );
 			}
 		}
 		
