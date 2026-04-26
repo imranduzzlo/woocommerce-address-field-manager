@@ -98,8 +98,15 @@ class WAFM_Settings {
 
 	/**
 	 * Enqueue order edit page assets
+	 * DISABLED - Using meta box instead of dynamic JavaScript fields
 	 */
 	public static function enqueue_order_edit_assets( $hook ) {
+		// DISABLED: The meta box handles thana fields now
+		// The JavaScript was causing conflicts (duplicate fields, infinite loading)
+		// Meta box provides a cleaner, more reliable solution
+		return;
+		
+		/* OLD CODE - DISABLED
 		// Only load on order edit pages
 		if ( ! in_array( $hook, array( 'post.php', 'post-new.php', 'woocommerce_page_wc-orders' ), true ) ) {
 			return;
@@ -181,6 +188,7 @@ class WAFM_Settings {
 				'shippingThana' => $shipping_thana,
 			)
 		);
+		*/
 	}
 
 	/**
