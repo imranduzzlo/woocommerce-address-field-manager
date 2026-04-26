@@ -2,6 +2,41 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.35] - 2026-04-26
+
+### 🔧 Fixed Duplicate Thana Display
+
+**Problem**: 
+Thana was showing twice in address:
+```
+Satkhira Sadar  ← City (we set it to thana name)
+Satkhira Sadar  ← Thana (from our format)
+SATKHIRA        ← State
+```
+
+**Root Cause**:
+In v1.0.32-v1.0.34, we were setting `billing_city` to the thana name to "force" display. This caused duplicate display because:
+1. City field showed thana name
+2. Thana field also showed thana name
+
+**Solution**:
+- Removed the code that sets city to thana name
+- Let city remain as the actual city (from checkout form)
+- Thana displays separately via our address format
+- No more duplicates!
+
+**Result**: 
+- ✅ City shows actual city value
+- ✅ Thana shows once in correct position
+- ✅ State shows correctly (BD-58 code in DB, formatted for display)
+- ✅ No duplicate thana!
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Removed city-to-thana conversion
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.35
+
+---
+
 ## [1.0.34] - 2026-04-26
 
 ### 🔧 Fixed State Dropdown - Store Codes, Not Names

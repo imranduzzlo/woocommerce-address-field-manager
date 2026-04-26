@@ -280,12 +280,6 @@ class WAFM_Checkout_Fields {
 			if ( $user_id ) {
 				update_user_meta( $user_id, $billing_settings['field_name'], $billing_thana );
 			}
-			
-			// Convert thana code to name and set as city for display
-			$thana_name = self::get_thana_name_from_code( $billing_thana );
-			if ( $thana_name ) {
-				$order->set_billing_city( $thana_name );
-			}
 		}
 
 		// Save shipping thana to order and user meta
@@ -296,12 +290,6 @@ class WAFM_Checkout_Fields {
 			// Also save to user meta if logged in
 			if ( $user_id ) {
 				update_user_meta( $user_id, $shipping_settings['field_name'], $shipping_thana );
-			}
-			
-			// Convert thana code to name and set as city for display
-			$thana_name = self::get_thana_name_from_code( $shipping_thana );
-			if ( $thana_name ) {
-				$order->set_shipping_city( $thana_name );
 			}
 		}
 
