@@ -619,11 +619,11 @@ class WAFM_Settings {
 		// Force WordPress to check for updates
 		wp_update_plugins();
 		
-		// Redirect with success message
+		// Redirect with success message and preserve tab
 		wp_safe_redirect( add_query_arg( array(
 			'page' => 'wafm-settings',
 			'cache_refreshed' => '1',
-		), admin_url( 'admin.php' ) ) );
+		), admin_url( 'admin.php' ) ) . '#updater' );
 		exit;
 	}
 }
