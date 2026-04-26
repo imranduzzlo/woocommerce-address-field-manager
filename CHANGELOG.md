@@ -2,6 +2,43 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.12] - 2026-04-26
+
+### 🐛 Critical Fix - Duplicate Fields When Converting
+
+**Fixed: Both Select and Input Showing Together**
+- **Problem**: When changing to non-BD country, both select dropdown AND text input appeared
+- **Root Cause**: `replaceWith()` wasn't properly removing the old field, especially select2-enhanced fields
+- **Solution**: Use `.after().remove()` pattern and destroy select2 before replacement
+- **Result**: Clean field conversion - only one field shows at a time
+
+### 🔧 Technical Details
+
+**Proper Field Replacement:**
+```javascript
+// Destroy select2 if exists
+if (thanaField.hasClass('select2-hidden-accessible')) {
+    thanaField.select2('destroy');
+}
+
+// Create new element
+var $newInput = $('<input ... />');
+
+// Remove old and insert new
+thanaField.after($newInput).remove();
+```
+
+**Why This Works:**
+- Destroys select2 enhancement before removal
+- Uses jQuery object creation instead of HTML strings
+- `.after().remove()` ensures clean DOM manipulation
+- No orphaned elements left behind
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Fixed field replacement logic
+
+---
+
 ## [1.0.11] - 2026-04-26
 
 ### 🐛 Critical Fixes
