@@ -164,7 +164,7 @@ class WAFM_Settings {
 		// Localize script
 		wp_localize_script(
 			'wafm-order-edit',
-			'wtsOrderEditData',
+			'wafmOrderEditData',
 			array(
 				'thanaData' => $thana_data,
 				'billingSettings' => $billing_settings,

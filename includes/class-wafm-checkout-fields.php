@@ -332,11 +332,17 @@ class WAFM_Checkout_Fields {
 		$meta_key = '_' . $settings['field_name'];
 		$order_id = $order->get_id();
 		
+		// Clear any cached data for this order
+		wp_cache_delete( $order_id, 'post_meta' );
+		wp_cache_delete( 'wc_order_' . $order_id, 'orders' );
+		
 		// Force fresh read from database, bypass cache
 		$thana_code = get_post_meta( $order_id, $meta_key, true );
 		
 		// If using HPOS, also try the order meta method
 		if ( ! $thana_code && method_exists( $order, 'get_meta' ) ) {
+			// Refresh order data from database
+			$order = wc_get_order( $order_id );
 			$thana_code = $order->get_meta( $meta_key, true, 'edit' ); // 'edit' context bypasses formatting
 		}
 
@@ -738,6 +744,10 @@ class WAFM_Checkout_Fields {
 		// Collect thana fields to display
 		$thana_fields = array();
 		$order_id = $order->get_id();
+		
+		// Clear any cached data for this order
+		wp_cache_delete( $order_id, 'post_meta' );
+		wp_cache_delete( 'wc_order_' . $order_id, 'orders' );
 
 		// Check billing thana - ALWAYS fetch fresh from database
 		if ( $billing_settings['enabled'] ) {
@@ -748,6 +758,8 @@ class WAFM_Checkout_Fields {
 			
 			// If using HPOS, also try the order meta method
 			if ( ! $thana_code && method_exists( $order, 'get_meta' ) ) {
+				// Refresh order data from database
+				$order = wc_get_order( $order_id );
 				$thana_code = $order->get_meta( $meta_key, true, 'edit' );
 			}
 			
@@ -770,6 +782,8 @@ class WAFM_Checkout_Fields {
 			
 			// If using HPOS, also try the order meta method
 			if ( ! $thana_code && method_exists( $order, 'get_meta' ) ) {
+				// Refresh order data from database
+				$order = wc_get_order( $order_id );
 				$thana_code = $order->get_meta( $meta_key, true, 'edit' );
 			}
 			
@@ -939,12 +953,22 @@ class WAFM_Checkout_Fields {
 		if ( $billing_settings['enabled'] && isset( $_POST[ '_' . $billing_settings['field_name'] ] ) ) {
 			$billing_thana = sanitize_text_field( wp_unslash( $_POST[ '_' . $billing_settings['field_name'] ] ) );
 			update_post_meta( $post_id, '_' . $billing_settings['field_name'], $billing_thana );
+			
+			// Clear cache for this order
+			wp_cache_delete( $post_id, 'post_meta' );
+			wp_cache_delete( 'wc_order_' . $post_id, 'orders' );
+			clean_post_cache( $post_id );
 		}
 
 		// Save shipping thana
 		if ( $shipping_settings['enabled'] && isset( $_POST[ '_' . $shipping_settings['field_name'] ] ) ) {
 			$shipping_thana = sanitize_text_field( wp_unslash( $_POST[ '_' . $shipping_settings['field_name'] ] ) );
 			update_post_meta( $post_id, '_' . $shipping_settings['field_name'], $shipping_thana );
+			
+			// Clear cache for this order
+			wp_cache_delete( $post_id, 'post_meta' );
+			wp_cache_delete( 'wc_order_' . $post_id, 'orders' );
+			clean_post_cache( $post_id );
 		}
 	}
 

@@ -8,13 +8,13 @@ jQuery(function($) {
 
 	const OrderThanaSelector = {
 		config: {
-			thanaData: wtsOrderEditData.thanaData || {},
-			billingSettings: wtsOrderEditData.billingSettings || {},
-			shippingSettings: wtsOrderEditData.shippingSettings || {},
-			billingState: wtsOrderEditData.billingState || '',
-			billingThana: wtsOrderEditData.billingThana || '',
-			shippingState: wtsOrderEditData.shippingState || '',
-			shippingThana: wtsOrderEditData.shippingThana || ''
+			thanaData: wafmOrderEditData.thanaData || {},
+			billingSettings: wafmOrderEditData.billingSettings || {},
+			shippingSettings: wafmOrderEditData.shippingSettings || {},
+			billingState: wafmOrderEditData.billingState || '',
+			billingThana: wafmOrderEditData.billingThana || '',
+			shippingState: wafmOrderEditData.shippingState || '',
+			shippingThana: wafmOrderEditData.shippingThana || ''
 		},
 
 		init: function() {
