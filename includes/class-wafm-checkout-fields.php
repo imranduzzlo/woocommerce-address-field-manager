@@ -1083,7 +1083,8 @@ class WAFM_Checkout_Fields {
 						<?php echo esc_html( $billing_settings['label'] ); ?> (Billing):
 					</label>
 					<?php
-					$is_bd = $billing_country === 'BD' && $billing_state && strpos( $billing_state, 'BD-' ) === 0;
+					// Check if state is BD (don't require country to be set)
+					$is_bd = $billing_state && strpos( $billing_state, 'BD-' ) === 0;
 					if ( $is_bd && isset( $thana_data[ $billing_state ] ) ) :
 						?>
 						<select id="_<?php echo esc_attr( $billing_settings['field_name'] ); ?>" name="_<?php echo esc_attr( $billing_settings['field_name'] ); ?>" class="wc-enhanced-select" style="width: 100%;">
@@ -1110,7 +1111,8 @@ class WAFM_Checkout_Fields {
 						<?php echo esc_html( $shipping_settings['label'] ); ?> (Shipping):
 					</label>
 					<?php
-					$is_bd = $shipping_country === 'BD' && $shipping_state && strpos( $shipping_state, 'BD-' ) === 0;
+					// Check if state is BD (don't require country to be set)
+					$is_bd = $shipping_state && strpos( $shipping_state, 'BD-' ) === 0;
 					if ( $is_bd && isset( $thana_data[ $shipping_state ] ) ) :
 						?>
 						<select id="_<?php echo esc_attr( $shipping_settings['field_name'] ); ?>" name="_<?php echo esc_attr( $shipping_settings['field_name'] ); ?>" class="wc-enhanced-select" style="width: 100%;">
