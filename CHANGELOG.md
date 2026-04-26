@@ -2,7 +2,43 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
-## [1.0.33] - 2026-04-26
+## [1.0.34] - 2026-04-26
+
+### 🔧 Fixed State Dropdown - Store Codes, Not Names
+
+**Problem with v1.0.32-v1.0.33**: 
+- We were converting state CODES to NAMES during save
+- `billing_state` = "SATKHIRA" (name) instead of "BD-58" (code)
+- Dropdown expects codes as values, so it showed "not selected"
+- JavaScript workaround in v1.0.33 was complex and unreliable
+
+**The Real Solution**:
+- **Store CODES in database** (BD-58, BD-58-05)
+- **Let WooCommerce format for display** using its built-in system
+- Dropdown works perfectly because it gets the code it expects
+- Display formatting handled by WooCommerce filters
+
+**What Changed**:
+- Removed state code-to-name conversion in `save_thana_fields()`
+- Removed complex JavaScript dropdown fix from v1.0.33
+- State stored as: `billing_state` = "BD-58" (code)
+- Thana stored as: `_billing_thana` = "BD-58-05" (code)
+- Display formatted by WooCommerce's address formatting system
+
+**Result**: 
+- ✅ State dropdown shows correct selection (gets code it expects)
+- ✅ Can edit state normally
+- ✅ Display shows formatted names via WooCommerce filters
+- ✅ Data integrity maintained (codes in DB)
+- ✅ Simple, reliable solution!
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Removed state conversion, simplified JS
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.34
+
+---
+
+## [1.0.33] - 2026-04-26 [DEPRECATED]
 
 ### 🔧 Fixed State Dropdown Selection in Admin
 

@@ -305,24 +305,7 @@ class WAFM_Checkout_Fields {
 			}
 		}
 
-		// Convert state codes to names for display (fix WooCommerce core issue)
-		$billing_state = $order->get_billing_state();
-		if ( $billing_state && strpos( $billing_state, 'BD-' ) === 0 ) {
-			$states = WC()->countries->get_states( 'BD' );
-			if ( isset( $states[ $billing_state ] ) ) {
-				$order->set_billing_state( $states[ $billing_state ] );
-			}
-		}
-
-		$shipping_state = $order->get_shipping_state();
-		if ( $shipping_state && strpos( $shipping_state, 'BD-' ) === 0 ) {
-			$states = WC()->countries->get_states( 'BD' );
-			if ( isset( $states[ $shipping_state ] ) ) {
-				$order->set_shipping_state( $states[ $shipping_state ] );
-			}
-		}
-
-		// Save the order with formatted values
+		// Save the order (state codes remain as codes for dropdown compatibility)
 		$order->save();
 	}
 
@@ -873,36 +856,6 @@ class WAFM_Checkout_Fields {
 		?>
 		<script type="text/javascript">
 		jQuery(document).ready(function($) {
-			// Fix state dropdown selection - find option by text and select it
-			<?php 
-			$billing_state_display = $order->get_billing_state();
-			$shipping_state_display = $order->get_shipping_state();
-			
-			// Check if state is stored as name (not code)
-			$billing_is_name = $billing_state_display && strpos( $billing_state_display, 'BD-' ) !== 0;
-			$shipping_is_name = $shipping_state_display && strpos( $shipping_state_display, 'BD-' ) !== 0;
-			?>
-			
-			<?php if ( $billing_is_name ) : ?>
-			// Fix billing state dropdown
-			$('#_billing_state option').each(function() {
-				if ($(this).text().toUpperCase() === '<?php echo esc_js( strtoupper( $billing_state_display ) ); ?>') {
-					$(this).prop('selected', true);
-					$('#_billing_state').trigger('change');
-				}
-			});
-			<?php endif; ?>
-			
-			<?php if ( $shipping_is_name ) : ?>
-			// Fix shipping state dropdown
-			$('#_shipping_state option').each(function() {
-				if ($(this).text().toUpperCase() === '<?php echo esc_js( strtoupper( $shipping_state_display ) ); ?>') {
-					$(this).prop('selected', true);
-					$('#_shipping_state').trigger('change');
-				}
-			});
-			<?php endif; ?>
-			
 			// Format billing address display
 			<?php if ( $billing_state_name ) : ?>
 			$('.order_data_column:first .address').each(function() {
