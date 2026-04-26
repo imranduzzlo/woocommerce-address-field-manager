@@ -29,11 +29,17 @@ class WAFM_Checkout_Fields {
 		add_filter( 'woocommerce_admin_billing_fields', array( __CLASS__, 'add_editable_billing_thana_to_order_admin' ) );
 		add_filter( 'woocommerce_admin_shipping_fields', array( __CLASS__, 'add_editable_shipping_thana_to_order_admin' ) );
 		
+		// HPOS compatibility - Add custom meta boxes for thana fields
+		add_action( 'add_meta_boxes', array( __CLASS__, 'add_thana_meta_boxes' ), 30 );
+		
 		// Load thana field values in admin order page
 		add_filter( 'woocommerce_found_customer_details', array( __CLASS__, 'load_thana_values_in_order_admin' ), 10, 3 );
 		
 		// Save thana when order is updated from admin
 		add_action( 'woocommerce_process_shop_order_meta', array( __CLASS__, 'save_thana_from_order_admin' ), 10, 2 );
+		
+		// HPOS save action
+		add_action( 'woocommerce_update_order', array( __CLASS__, 'save_thana_from_hpos_order' ), 10, 1 );
 
 		// Register thana as WooCommerce address field
 		add_filter( 'woocommerce_get_customer_address_fields', array( __CLASS__, 'register_thana_address_field' ) );
@@ -996,5 +1002,133 @@ class WAFM_Checkout_Fields {
 		}
 
 		return $customer_data;
+	}
+
+	/**
+	 * Add thana meta boxes for HPOS compatibility
+	 */
+	public static function add_thana_meta_boxes() {
+		$screen = wc_get_container()->get( \Automattic\WooCommerce\Internal\DataStores\Orders\CustomOrdersTableController::class )->custom_orders_table_usage_is_enabled()
+			? wc_get_page_screen_id( 'shop-order' )
+			: 'shop_order';
+
+		add_meta_box(
+			'wafm_thana_fields',
+			__( 'Thana / Locality Fields', 'woocommerce-address-field-manager' ),
+			array( __CLASS__, 'render_thana_meta_box' ),
+			$screen,
+			'side',
+			'default'
+		);
+	}
+
+	/**
+	 * Render thana meta box
+	 */
+	public static function render_thana_meta_box( $post_or_order_object ) {
+		$order = ( $post_or_order_object instanceof \WP_Post ) ? wc_get_order( $post_or_order_object->ID ) : $post_or_order_object;
+		
+		if ( ! $order ) {
+			return;
+		}
+
+		$order_id = $order->get_id();
+		$billing_settings = WAFM_Settings::get_billing_settings();
+		$shipping_settings = WAFM_Settings::get_shipping_settings();
+
+		// Get thana data
+		$thana_data = self::get_thana_data();
+
+		// Get current values
+		$billing_country = $order->get_billing_country();
+		$billing_state = $order->get_billing_state();
+		$billing_thana = $order->get_meta( '_' . $billing_settings['field_name'], true );
+		
+		$shipping_country = $order->get_shipping_country();
+		$shipping_state = $order->get_shipping_state();
+		$shipping_thana = $order->get_meta( '_' . $shipping_settings['field_name'], true );
+
+		wp_nonce_field( 'wafm_save_thana_meta_box', 'wafm_thana_nonce' );
+		?>
+		<div class="wafm-thana-meta-box">
+			<?php if ( $billing_settings['enabled'] ) : ?>
+				<p class="form-field form-field-wide">
+					<label for="_<?php echo esc_attr( $billing_settings['field_name'] ); ?>">
+						<?php echo esc_html( $billing_settings['label'] ); ?> (Billing):
+					</label>
+					<?php
+					$is_bd = $billing_country === 'BD' && $billing_state && strpos( $billing_state, 'BD-' ) === 0;
+					if ( $is_bd && isset( $thana_data[ $billing_state ] ) ) :
+						?>
+						<select id="_<?php echo esc_attr( $billing_settings['field_name'] ); ?>" name="_<?php echo esc_attr( $billing_settings['field_name'] ); ?>" class="wc-enhanced-select" style="width: 100%;">
+							<option value="">Select Thana</option>
+							<?php foreach ( $thana_data[ $billing_state ] as $code => $name ) : ?>
+								<option value="<?php echo esc_attr( $code ); ?>" <?php selected( $billing_thana, $code ); ?>>
+									<?php echo esc_html( $name ); ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
+					<?php else : ?>
+						<input type="text" id="_<?php echo esc_attr( $billing_settings['field_name'] ); ?>" name="_<?php echo esc_attr( $billing_settings['field_name'] ); ?>" value="<?php echo esc_attr( $billing_thana ); ?>" style="width: 100%;" />
+					<?php endif; ?>
+				</p>
+			<?php endif; ?>
+
+			<?php if ( $shipping_settings['enabled'] ) : ?>
+				<p class="form-field form-field-wide">
+					<label for="_<?php echo esc_attr( $shipping_settings['field_name'] ); ?>">
+						<?php echo esc_html( $shipping_settings['label'] ); ?> (Shipping):
+					</label>
+					<?php
+					$is_bd = $shipping_country === 'BD' && $shipping_state && strpos( $shipping_state, 'BD-' ) === 0;
+					if ( $is_bd && isset( $thana_data[ $shipping_state ] ) ) :
+						?>
+						<select id="_<?php echo esc_attr( $shipping_settings['field_name'] ); ?>" name="_<?php echo esc_attr( $shipping_settings['field_name'] ); ?>" class="wc-enhanced-select" style="width: 100%;">
+							<option value="">Select Thana</option>
+							<?php foreach ( $thana_data[ $shipping_state ] as $code => $name ) : ?>
+								<option value="<?php echo esc_attr( $code ); ?>" <?php selected( $shipping_thana, $code ); ?>>
+									<?php echo esc_html( $name ); ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
+					<?php else : ?>
+						<input type="text" id="_<?php echo esc_attr( $shipping_settings['field_name'] ); ?>" name="_<?php echo esc_attr( $shipping_settings['field_name'] ); ?>" value="<?php echo esc_attr( $shipping_thana ); ?>" style="width: 100%;" />
+					<?php endif; ?>
+				</p>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * Save thana from HPOS order
+	 */
+	public static function save_thana_from_hpos_order( $order_id ) {
+		// Verify nonce
+		if ( ! isset( $_POST['wafm_thana_nonce'] ) || ! wp_verify_nonce( $_POST['wafm_thana_nonce'], 'wafm_save_thana_meta_box' ) ) {
+			return;
+		}
+
+		$order = wc_get_order( $order_id );
+		if ( ! $order ) {
+			return;
+		}
+
+		$billing_settings = WAFM_Settings::get_billing_settings();
+		$shipping_settings = WAFM_Settings::get_shipping_settings();
+
+		// Save billing thana
+		if ( $billing_settings['enabled'] && isset( $_POST[ '_' . $billing_settings['field_name'] ] ) ) {
+			$billing_thana = sanitize_text_field( wp_unslash( $_POST[ '_' . $billing_settings['field_name'] ] ) );
+			$order->update_meta_data( '_' . $billing_settings['field_name'], $billing_thana );
+		}
+
+		// Save shipping thana
+		if ( $shipping_settings['enabled'] && isset( $_POST[ '_' . $shipping_settings['field_name'] ] ) ) {
+			$shipping_thana = sanitize_text_field( wp_unslash( $_POST[ '_' . $shipping_settings['field_name'] ] ) );
+			$order->update_meta_data( '_' . $shipping_settings['field_name'], $shipping_thana );
+		}
+
+		$order->save();
 	}
 }

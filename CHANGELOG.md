@@ -2,6 +2,41 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.5] - 2026-04-26
+
+### 🚀 Major Fix - HPOS Compatibility
+
+**Admin Order Edit - Meta Box Implementation**
+- Added dedicated meta box for thana fields in order edit page
+- Works with both traditional posts and HPOS (High-Performance Order Storage)
+- Meta box appears in sidebar with proper field rendering
+- Automatically detects country/state and shows dropdown or text input
+- Properly saves thana values using WooCommerce order meta
+
+### ✨ New Features
+- **Side Meta Box**: Thana fields now appear in a dedicated "Thana / Locality Fields" meta box
+- **Auto Field Type**: Automatically shows dropdown for Bangladesh states, text input for others
+- **HPOS Support**: Full compatibility with WooCommerce High-Performance Order Storage
+- **Proper Save Handling**: Uses `woocommerce_update_order` action for HPOS orders
+
+### 🔧 Technical Improvements
+- Added `add_meta_boxes` action to register thana meta box
+- Implemented `render_thana_meta_box()` for field rendering
+- Added `save_thana_from_hpos_order()` for HPOS save handling
+- Detects HPOS vs traditional posts automatically
+- Uses WooCommerce's `wc-enhanced-select` for better UX
+- Proper nonce verification for security
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Added meta box implementation
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.5
+- `CHANGELOG.md` - Added v1.0.5 changelog entry
+
+### 🎯 Why This Fix
+The previous implementation used `woocommerce_admin_billing_fields` filter which doesn't work reliably with HPOS. The new meta box approach is the recommended way to add custom fields to WooCommerce orders and works with both storage methods.
+
+---
+
 ## [1.0.4] - 2026-04-26
 
 ### 🐛 Bug Fixes
