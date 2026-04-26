@@ -24,6 +24,9 @@ class WAFM_Checkout_Fields {
 		// Save thana fields
 		add_action( 'woocommerce_checkout_process', array( __CLASS__, 'validate_thana_fields' ) );
 		add_action( 'woocommerce_checkout_update_order_meta', array( __CLASS__, 'save_thana_fields' ) );
+		
+		// Clear cache after new order is created to ensure formatted display
+		add_action( 'woocommerce_new_order', array( __CLASS__, 'clear_cache_on_new_order' ), 20, 1 );
 
 		// Make thana editable in admin order page - DISABLED (using meta box instead)
 		// add_filter( 'woocommerce_admin_billing_fields', array( __CLASS__, 'add_editable_billing_thana_to_order_admin' ) );
@@ -229,6 +232,13 @@ class WAFM_Checkout_Fields {
 		}
 
 		return $store_country;
+	}
+
+	/**
+	 * Clear cache on new order to ensure formatted display
+	 */
+	public static function clear_cache_on_new_order( $order_id ) {
+		self::clear_all_order_caches( $order_id );
 	}
 
 	/**

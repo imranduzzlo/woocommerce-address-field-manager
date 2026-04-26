@@ -2,6 +2,44 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.31] - 2026-04-26
+
+### 🔧 Fixed New Order Cache Issue
+
+**Problem**: 
+New orders still showed raw codes even with v1.0.30:
+```
+BD-58  ← Still showing code
+```
+
+But after clicking "Edit" and "Update" (without changes), it showed formatted:
+```
+Satkhira Sadar
+SATKHIRA  ← Formatted!
+```
+
+**Root Cause Found**:
+When you click "Edit" and "Update", WooCommerce calls `clear_all_order_caches()`. This clears the cached raw data, and then our formatting filters work correctly!
+
+**The Issue**:
+- New orders have **cached raw data** that bypasses our formatting filters
+- Only after cache is cleared (by editing), filters are applied
+
+**Solution**:
+- Added `clear_cache_on_new_order()` method
+- Hooks into `woocommerce_new_order` (priority 20)
+- Clears cache immediately after order creation
+- Forces WooCommerce to re-process address through our formatting filters
+
+**Result**: 
+New orders now show formatted addresses immediately without needing to edit!
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Added cache clearing on new order
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.31
+
+---
+
 ## [1.0.30] - 2026-04-26
 
 ### 🔧 Fixed Address Display - Keep Codes in Database, Format for Display Only
