@@ -2,6 +2,30 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.2] - 2026-04-26
+
+### 🚀 New Feature
+
+**GitHub Auto-Updater**
+- Added automatic update system from GitHub releases
+- Plugin now checks for updates automatically every 6 hours
+- One-click updates directly from WordPress admin
+- No need to manually download and upload plugin files
+- Update notifications appear in WordPress Plugins page
+- View changelog before updating
+
+### 🔧 How It Works
+- Uses WordPress `update_plugins_github.com` filter
+- Fetches latest release from GitHub API
+- Compares versions and shows update notification
+- Downloads and installs updates automatically
+- Preserves plugin settings and data
+
+### 📝 Files Added
+- `includes/class-github-updater.php` - GitHub updater class
+
+---
+
 ## [1.0.1] - 2026-04-26
 
 ### 🔧 Bug Fixes
