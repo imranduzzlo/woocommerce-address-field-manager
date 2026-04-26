@@ -343,6 +343,10 @@ class WAFM_Checkout_Fields {
 		$meta_key = '_' . $settings['field_name'];
 		$thana_code = $order->get_meta( $meta_key );
 
+		error_log( 'WAFM Debug - Filter: ' . current_filter() );
+		error_log( 'WAFM Debug - Thana code: ' . $thana_code );
+		error_log( 'WAFM Debug - Address keys before: ' . implode( ', ', array_keys( $address ) ) );
+
 		if ( ! $thana_code ) {
 			return $address;
 		}
@@ -354,6 +358,9 @@ class WAFM_Checkout_Fields {
 		// Add thana to address array with key 'thana' (without billing_/shipping_ prefix)
 		// WooCommerce address format uses simple keys like {first_name}, {city}, {thana}
 		$address['thana'] = $display_value;
+
+		error_log( 'WAFM Debug - Added thana: ' . $display_value );
+		error_log( 'WAFM Debug - Address keys after: ' . implode( ', ', array_keys( $address ) ) );
 
 		return $address;
 	}
@@ -715,12 +722,19 @@ class WAFM_Checkout_Fields {
 		$billing_settings = WAFM_Settings::get_billing_settings();
 		$shipping_settings = WAFM_Settings::get_shipping_settings();
 
+		// Debug: Log the original format
+		if ( isset( $formats['BD'] ) ) {
+			error_log( 'WAFM Debug - Original BD format: ' . $formats['BD'] );
+		}
+
 		// Add thana placeholder to Bangladesh address format
 		// Use simple {thana} placeholder (without billing_/shipping_ prefix)
 		// WooCommerce uses the same format for both billing and shipping
 		if ( isset( $formats['BD'] ) && ( $billing_settings['enabled'] || $shipping_settings['enabled'] ) ) {
 			// Add {thana} placeholder after {state}
 			$formats['BD'] = str_replace( '{state}', '{state}\n{thana}', $formats['BD'] );
+			
+			error_log( 'WAFM Debug - Modified BD format: ' . $formats['BD'] );
 		}
 
 		return $formats;
