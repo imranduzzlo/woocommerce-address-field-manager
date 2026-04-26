@@ -2,6 +2,31 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.3] - 2026-04-26
+
+### ✨ New Feature
+
+**Update Checker UI**
+- Added "Check Updates" link in plugin action links (next to Settings)
+- One-click update cache refresh directly from plugins page
+- Clears all update-related transients and caches
+- Forces WordPress to check for new updates immediately
+- Shows success notification with current version after check
+- Styled link in blue to stand out
+- Matches WooCommerce Team Payroll plugin's update checker UI
+
+### 🔧 Technical Details
+- Clears `wafm_github_release` and `wafm_github_release_v2` transients
+- Clears WordPress `update_plugins` and `update_plugins_last_checked` transients
+- Runs `wp_clean_plugins_cache()` and `wp_update_plugins()`
+- Requires `update_plugins` capability for security
+- Redirects back to plugins page after check
+
+### 📝 Files Modified
+- `includes/class-wafm-main.php` - Added update checker link and handler
+
+---
+
 ## [1.0.2] - 2026-04-26
 
 ### 🚀 New Feature
