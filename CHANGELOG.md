@@ -2,6 +2,56 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.10] - 2026-04-26
+
+### 🐛 Critical Fixes
+
+**Fixed: Infinite Loop on Save**
+- **Problem**: `woocommerce_update_order` hook was triggering itself when calling `$order->save()`
+- **Solution**: Remove the action before saving, then re-add it after
+- **Result**: Order saves complete instantly without infinite loops
+
+**Fixed: Fields Not Switching Dynamically**
+- **Problem**: Meta box fields were static, didn't change when country/state changed
+- **Solution**: Added inline JavaScript to meta box for dynamic field switching
+- **Result**: Fields now convert between select/input when country/state changes
+
+**Fixed: Shipping Not Auto-Selected**
+- **Problem**: Saved thana value wasn't being selected in dropdown
+- **Solution**: JavaScript now properly selects saved value when populating options
+- **Result**: Saved values are automatically selected
+
+### ✨ New Features
+
+**Dynamic Field Switching in Meta Box**
+- Listens for country and state changes
+- Automatically converts between select dropdown and text input
+- Preserves current value during conversion
+- Uses WooCommerce's selectWoo for enhanced selects
+- Works for both billing and shipping
+
+### 🔧 Technical Details
+
+**Infinite Loop Prevention:**
+```php
+// Remove action before save
+remove_action( 'woocommerce_update_order', array( __CLASS__, 'save_thana_from_hpos_order' ), 10 );
+$order->save();
+// Re-add action after save
+add_action( 'woocommerce_update_order', array( __CLASS__, 'save_thana_from_hpos_order' ), 10, 1 );
+```
+
+**Dynamic Field Switching:**
+- Inline JavaScript in meta box
+- Monitors `#_billing_country`, `#_billing_state`, `#_shipping_country`, `#_shipping_state`
+- Converts fields on change
+- Preserves values during conversion
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Fixed infinite loop and added dynamic JavaScript
+
+---
+
 ## [1.0.9] - 2026-04-26
 
 ### 🐛 Critical Fix - Infinite Loading and Duplicate Fields
