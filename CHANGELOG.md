@@ -2,6 +2,32 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.41] - 2026-04-26
+
+### 🔧 Fixed State Case Matching in JavaScript
+
+**Problem with v1.0.40**: 
+JavaScript was looking for "SATKHIRA" (uppercase) but the actual HTML shows "Satkhira" (title case), so it couldn't find the state to inject thana before it.
+
+**Solution**:
+Updated JavaScript to try multiple case formats:
+1. Uppercase: "SATKHIRA"
+2. Title case: "Satkhira"  
+3. Original: whatever format it is
+
+Also added console logging to debug what's actually in the HTML.
+
+**Result**: 
+- ✅ JavaScript now finds the state regardless of case
+- ✅ Thana injected before state
+- ✅ Console logs help debug if issues occur
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Fixed case matching
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.41
+
+---
+
 ## [1.0.40] - 2026-04-26
 
 ### 🔧 Added JavaScript Injection for Admin Display

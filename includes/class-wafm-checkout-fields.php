@@ -996,38 +996,112 @@ class WAFM_Checkout_Fields {
 		?>
 		<script type="text/javascript">
 		jQuery(document).ready(function($) {
-			<?php if ( $billing_thana_name && $billing_state_name ) : ?>
+			<?php if ( $billing_thana_name ) : ?>
 			// Inject billing thana before state
 			$('.order_data_column:first .address').each(function() {
 				var $address = $(this);
 				var html = $address.html();
 				
+				console.log('Billing address HTML:', html);
+				console.log('Looking for thana:', '<?php echo esc_js( $billing_thana_name ); ?>');
+				
 				// Check if thana is already there
 				if (html.indexOf('<?php echo esc_js( $billing_thana_name ); ?>') === -1) {
-					// Find state and add thana before it
-					var stateText = '<?php echo esc_js( $billing_state_name ); ?>';
-					if (html.indexOf(stateText) !== -1) {
-						html = html.replace(stateText, '<?php echo esc_js( $billing_thana_name ); ?><br/>' + stateText);
-						$address.html(html);
+					// Try to find state in different formats
+					var stateUpper = '<?php echo esc_js( strtoupper( $billing_state_name ) ); ?>';
+					var stateTitle = '<?php echo esc_js( ucwords( strtolower( $billing_state_name ) ) ); ?>';
+					var stateOriginal = '<?php echo esc_js( $billing_state_name ); ?>';
+					
+					console.log('Looking for state (upper):', stateUpper);
+					console.log('Looking for state (title):', stateTitle);
+					console.log('Looking for state (original):', stateOriginal);
+					
+					var replaced = false;
+					
+					// Try uppercase first (SATKHIRA)
+					if (!replaced && html.indexOf(stateUpper) !== -1) {
+						html = html.replace(stateUpper, '<?php echo esc_js( $billing_thana_name ); ?><br/>' + stateUpper);
+						replaced = true;
+						console.log('Replaced with uppercase state');
 					}
+					
+					// Try title case (Satkhira)
+					if (!replaced && html.indexOf(stateTitle) !== -1) {
+						html = html.replace(stateTitle, '<?php echo esc_js( $billing_thana_name ); ?><br/>' + stateTitle);
+						replaced = true;
+						console.log('Replaced with title case state');
+					}
+					
+					// Try original
+					if (!replaced && html.indexOf(stateOriginal) !== -1) {
+						html = html.replace(stateOriginal, '<?php echo esc_js( $billing_thana_name ); ?><br/>' + stateOriginal);
+						replaced = true;
+						console.log('Replaced with original state');
+					}
+					
+					if (replaced) {
+						$address.html(html);
+						console.log('Updated billing address');
+					} else {
+						console.log('Could not find state to replace');
+					}
+				} else {
+					console.log('Thana already in address');
 				}
 			});
 			<?php endif; ?>
 			
-			<?php if ( $shipping_thana_name && $shipping_state_name ) : ?>
+			<?php if ( $shipping_thana_name ) : ?>
 			// Inject shipping thana before state
 			$('.order_data_column:last .address').each(function() {
 				var $address = $(this);
 				var html = $address.html();
 				
+				console.log('Shipping address HTML:', html);
+				console.log('Looking for thana:', '<?php echo esc_js( $shipping_thana_name ); ?>');
+				
 				// Check if thana is already there
 				if (html.indexOf('<?php echo esc_js( $shipping_thana_name ); ?>') === -1) {
-					// Find state and add thana before it
-					var stateText = '<?php echo esc_js( $shipping_state_name ); ?>';
-					if (html.indexOf(stateText) !== -1) {
-						html = html.replace(stateText, '<?php echo esc_js( $shipping_thana_name ); ?><br/>' + stateText);
-						$address.html(html);
+					// Try to find state in different formats
+					var stateUpper = '<?php echo esc_js( strtoupper( $shipping_state_name ) ); ?>';
+					var stateTitle = '<?php echo esc_js( ucwords( strtolower( $shipping_state_name ) ) ); ?>';
+					var stateOriginal = '<?php echo esc_js( $shipping_state_name ); ?>';
+					
+					console.log('Looking for state (upper):', stateUpper);
+					console.log('Looking for state (title):', stateTitle);
+					console.log('Looking for state (original):', stateOriginal);
+					
+					var replaced = false;
+					
+					// Try uppercase first (SATKHIRA)
+					if (!replaced && html.indexOf(stateUpper) !== -1) {
+						html = html.replace(stateUpper, '<?php echo esc_js( $shipping_thana_name ); ?><br/>' + stateUpper);
+						replaced = true;
+						console.log('Replaced with uppercase state');
 					}
+					
+					// Try title case (Satkhira)
+					if (!replaced && html.indexOf(stateTitle) !== -1) {
+						html = html.replace(stateTitle, '<?php echo esc_js( $shipping_thana_name ); ?><br/>' + stateTitle);
+						replaced = true;
+						console.log('Replaced with title case state');
+					}
+					
+					// Try original
+					if (!replaced && html.indexOf(stateOriginal) !== -1) {
+						html = html.replace(stateOriginal, '<?php echo esc_js( $shipping_thana_name ); ?><br/>' + stateOriginal);
+						replaced = true;
+						console.log('Replaced with original state');
+					}
+					
+					if (replaced) {
+						$address.html(html);
+						console.log('Updated shipping address');
+					} else {
+						console.log('Could not find state to replace');
+					}
+				} else {
+					console.log('Thana already in address');
 				}
 			});
 			<?php endif; ?>
