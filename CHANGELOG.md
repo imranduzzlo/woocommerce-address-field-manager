@@ -2,6 +2,37 @@
 
 All notable changes to WooCommerce Address Field Manager will be documented in this file.
 
+## [1.0.40] - 2026-04-26
+
+### 🔧 Added JavaScript Injection for Admin Display
+
+**Problem with v1.0.39**: 
+The PHP filters weren't being triggered in admin order view because WooCommerce admin displays address fields directly, not through the formatted address filters.
+
+**Solution - JavaScript Injection**:
+Added `inject_thana_in_admin_display()` method that uses JavaScript to inject thana into the admin address display after page load.
+
+**How It Works**:
+1. Runs on admin order pages only
+2. Gets thana from order meta
+3. Converts thana code to name
+4. Uses jQuery to find the state in the address HTML
+5. Injects thana before the state
+6. Checks if thana is already there to avoid duplicates
+
+**Result**: 
+- ✅ Thana shows in admin order view
+- ✅ Thana appears above state
+- ✅ Works for new and edited orders
+- ✅ No duplicates
+- ✅ State still formatted correctly
+
+### 📝 Files Modified
+- `includes/class-wafm-checkout-fields.php` - Added JavaScript injection
+- `woocommerce-address-field-manager.php` - Version bump to 1.0.40
+
+---
+
 ## [1.0.39] - 2026-04-26
 
 ### 🎯 The Ultimate Fix - Multi-Layer Thana Injection

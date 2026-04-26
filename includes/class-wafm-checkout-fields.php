@@ -93,6 +93,9 @@ class WAFM_Checkout_Fields {
 		// Clear session when user updates profile
 		add_action( 'personal_options_update', array( __CLASS__, 'clear_thana_session' ) );
 		add_action( 'edit_user_profile_update', array( __CLASS__, 'clear_thana_session' ) );
+		
+		// Add JavaScript to inject thana into admin address display
+		add_action( 'admin_footer', array( __CLASS__, 'inject_thana_in_admin_display' ) );
 	}
 
 	/**
@@ -937,6 +940,100 @@ class WAFM_Checkout_Fields {
 		}
 		
 		return '';
+	}
+
+	/**
+	 * Inject thana into admin address display using JavaScript
+	 * This is the final solution to ensure thana always shows in admin
+	 */
+	public static function inject_thana_in_admin_display() {
+		$screen = get_current_screen();
+		if ( ! $screen || ( $screen->id !== 'shop_order' && $screen->id !== 'woocommerce_page_wc-orders' ) ) {
+			return;
+		}
+
+		global $post;
+		$order_id = $post ? $post->ID : ( isset( $_GET['id'] ) ? intval( $_GET['id'] ) : 0 );
+		if ( ! $order_id ) {
+			return;
+		}
+
+		$order = wc_get_order( $order_id );
+		if ( ! $order ) {
+			return;
+		}
+
+		// Get settings
+		$billing_settings = WAFM_Settings::get_billing_settings();
+		$shipping_settings = WAFM_Settings::get_shipping_settings();
+		
+		// Get thana codes and convert to names
+		$billing_thana_code = $order->get_meta( '_' . $billing_settings['field_name'] );
+		$shipping_thana_code = $order->get_meta( '_' . $shipping_settings['field_name'] );
+		
+		$billing_thana_name = $billing_thana_code ? self::get_thana_name_from_code( $billing_thana_code ) : '';
+		$shipping_thana_name = $shipping_thana_code ? self::get_thana_name_from_code( $shipping_thana_code ) : '';
+		
+		// Get state for positioning
+		$billing_state = $order->get_billing_state();
+		$shipping_state = $order->get_shipping_state();
+		
+		// Convert state codes to names for matching
+		if ( $billing_state && strpos( $billing_state, 'BD-' ) === 0 ) {
+			$states = WC()->countries->get_states( 'BD' );
+			$billing_state_name = isset( $states[ $billing_state ] ) ? $states[ $billing_state ] : $billing_state;
+		} else {
+			$billing_state_name = $billing_state;
+		}
+		
+		if ( $shipping_state && strpos( $shipping_state, 'BD-' ) === 0 ) {
+			$states = WC()->countries->get_states( 'BD' );
+			$shipping_state_name = isset( $states[ $shipping_state ] ) ? $states[ $shipping_state ] : $shipping_state;
+		} else {
+			$shipping_state_name = $shipping_state;
+		}
+		
+		?>
+		<script type="text/javascript">
+		jQuery(document).ready(function($) {
+			<?php if ( $billing_thana_name && $billing_state_name ) : ?>
+			// Inject billing thana before state
+			$('.order_data_column:first .address').each(function() {
+				var $address = $(this);
+				var html = $address.html();
+				
+				// Check if thana is already there
+				if (html.indexOf('<?php echo esc_js( $billing_thana_name ); ?>') === -1) {
+					// Find state and add thana before it
+					var stateText = '<?php echo esc_js( $billing_state_name ); ?>';
+					if (html.indexOf(stateText) !== -1) {
+						html = html.replace(stateText, '<?php echo esc_js( $billing_thana_name ); ?><br/>' + stateText);
+						$address.html(html);
+					}
+				}
+			});
+			<?php endif; ?>
+			
+			<?php if ( $shipping_thana_name && $shipping_state_name ) : ?>
+			// Inject shipping thana before state
+			$('.order_data_column:last .address').each(function() {
+				var $address = $(this);
+				var html = $address.html();
+				
+				// Check if thana is already there
+				if (html.indexOf('<?php echo esc_js( $shipping_thana_name ); ?>') === -1) {
+					// Find state and add thana before it
+					var stateText = '<?php echo esc_js( $shipping_state_name ); ?>';
+					if (html.indexOf(stateText) !== -1) {
+						html = html.replace(stateText, '<?php echo esc_js( $shipping_thana_name ); ?><br/>' + stateText);
+						$address.html(html);
+					}
+				}
+			});
+			<?php endif; ?>
+		});
+		</script>
+		<?php
 	}
 
 	/**
